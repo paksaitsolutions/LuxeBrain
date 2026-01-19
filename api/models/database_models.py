@@ -84,7 +84,7 @@ class UserInteraction(Base):
     session_id = Column(String, index=True)
     event_type = Column(String)  # view, click, add_to_cart, search
     product_id = Column(Integer, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    event_metadata = Column(JSON, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
     
     customer = relationship("Customer", back_populates="interactions")

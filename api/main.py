@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import time
 
-from api.routes import recommendations, forecasting, segmentation, pricing, visual_search, webhooks
+from api.routes import recommendations, forecasting, segmentation, pricing, visual_search, webhooks, auth
 from api.middleware.rate_limiter import RateLimitMiddleware
 from api.middleware.auth import AuthMiddleware
 from config.settings import settings
@@ -74,6 +74,7 @@ async def health_check():
 
 
 # Include routers
+app.include_router(auth.router)
 app.include_router(recommendations.router, prefix="/api/v1/recommendations", tags=["Recommendations"])
 app.include_router(forecasting.router, prefix="/api/v1/forecasting", tags=["Forecasting"])
 app.include_router(segmentation.router, prefix="/api/v1/segmentation", tags=["Segmentation"])

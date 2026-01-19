@@ -1,0 +1,34 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@luxebrain/api": [
+        "../../packages/api"
+      ],
+      "@luxebrain/auth": [
+        "../../packages/auth"
+      ],
+      "@luxebrain/ui": [
+        "../../packages/ui"
+      ],
+      "@luxebrain/config": [
+        "../../packages/config"
+      ]
+    },
+    "noEmit": true,
+    "isolatedModules": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

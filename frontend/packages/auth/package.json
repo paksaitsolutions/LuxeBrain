@@ -1,0 +1,9 @@
+{
+  "name": "@luxebrain/auth",
+  "version": "1.0.0",
+  "main": "./jwt.ts",
+  "types": "./jwt.ts",
+  "dependencies": {
+    "jose": "^5.1.3"
+  }
+}

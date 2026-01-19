@@ -1,0 +1,7 @@
+{
+  "name": "@luxebrain/api",
+  "version": "1.0.0",
+  "main": "./client.ts",
+  "types": "./client.ts",
+  "dependencies": {}
+}
