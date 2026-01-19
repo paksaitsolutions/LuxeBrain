@@ -27,7 +27,7 @@ kombu==5.3.4
 
 # API & HTTP
 httpx==0.25.2
-requests==2.31.0
+requests==2.32.4
 aiohttp==3.9.1
 
 # Data Processing
