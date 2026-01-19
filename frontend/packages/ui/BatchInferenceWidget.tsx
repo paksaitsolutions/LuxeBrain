@@ -1,3 +1,4 @@
+'use client';
 /**
  * Batch Inference Widget
  * Copyright © 2024 Paksa IT Solutions

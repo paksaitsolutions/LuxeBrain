@@ -51,7 +51,8 @@ class DeprecationMiddleware(BaseHTTPMiddleware):
         )
         
         try:
-            from api.models.database_models import DeprecatedApiLog, SessionLocal
+            from api.models.database_models import DeprecatedApiLog
+            from config.database import SessionLocal
             from datetime import datetime
             
             db = SessionLocal()

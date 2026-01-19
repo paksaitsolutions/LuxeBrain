@@ -1,3 +1,4 @@
+'use client';
 /**
  * Offline Detector
  * Copyright © 2024 Paksa IT Solutions

@@ -57,8 +57,11 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-blue-600">1</span>
               </div>
-              <h3 className="text-xl font-bold mb-2">Connect Your Store</h3>
-              <p className="text-gray-600">Install plugin, connect WooCommerce in 2 minutes</p>
+              <h3 className="text-xl font-bold mb-2">Download Plugin</h3>
+              <p className="text-gray-600 mb-4">Install our WooCommerce plugin in 2 minutes</p>
+              <a href="/luxebrain-ai.zip" download className="inline-block bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium">
+                Download Plugin
+              </a>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">

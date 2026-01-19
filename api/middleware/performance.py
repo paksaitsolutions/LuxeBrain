@@ -34,7 +34,8 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         )
         
         try:
-            from api.models.database_models import SlowQueryLog, SessionLocal
+            from api.models.database_models import SlowQueryLog
+            from config.database import SessionLocal
             from datetime import datetime
             
             db = SessionLocal()

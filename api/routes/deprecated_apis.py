@@ -3,7 +3,8 @@ Deprecated API admin routes
 Copyright © 2024 Paksa IT Solutions. All Rights Reserved.
 """
 from fastapi import APIRouter, Query
-from api.models.database_models import DeprecatedApiLog, SessionLocal
+from api.models.database_models import DeprecatedApiLog
+from config.database import SessionLocal
 from api.middleware.deprecation import DEPRECATED_ENDPOINTS
 from datetime import datetime
 from sqlalchemy import func

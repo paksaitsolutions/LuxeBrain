@@ -24,6 +24,7 @@ redis==5.2.0
 # Task Queue
 celery==5.3.4
 kombu==5.3.4
+apscheduler==3.11.2
 
 # API & HTTP
 httpx==0.25.2

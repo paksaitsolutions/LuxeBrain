@@ -4,7 +4,8 @@ Copyright © 2024 Paksa IT Solutions. All Rights Reserved.
 """
 from fastapi import APIRouter, Depends
 from api.middleware.rate_limiter import rate_limiter
-from api.models.database_models import RateLimitLog, SessionLocal
+from api.models.database_models import RateLimitLog
+from config.database import SessionLocal
 from datetime import datetime, timedelta
 from sqlalchemy import func
 

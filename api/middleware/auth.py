@@ -3,7 +3,7 @@ Authentication Middleware
 Copyright © 2024 Paksa IT Solutions
 """
 
-from fastapi import Request, HTTPException
+from fastapi import Request, HTTPException, Depends
 from starlette.middleware.base import BaseHTTPMiddleware
 from jose import jwt, JWTError
 from config.settings import settings
@@ -39,3 +39,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             raise HTTPException(status_code=401, detail="Invalid token")
         
         return await call_next(request)
+
+
+async def verify_admin(request: Request):
+    """Verify user is admin"""
+    user = getattr(request.state, 'user', None)
+    if not user or user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user

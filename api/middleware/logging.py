@@ -53,7 +53,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     def _store_api_log(self, request, response, process_time, tenant_id, user_id):
         """Store API log in database"""
         try:
-            from api.models.database_models import ApiLog, SessionLocal
+            from api.models.database_models import ApiLog
+            from config.database import SessionLocal
             from datetime import datetime
             
             db = SessionLocal()

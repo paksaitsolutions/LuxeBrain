@@ -3,7 +3,8 @@ Slow Query admin routes
 Copyright © 2024 Paksa IT Solutions. All Rights Reserved.
 """
 from fastapi import APIRouter, Query
-from api.models.database_models import SlowQueryLog, SessionLocal
+from api.models.database_models import SlowQueryLog
+from config.database import SessionLocal
 from datetime import datetime, timedelta
 from sqlalchemy import func
 

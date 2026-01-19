@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Anomaly Notification Banner
  * Copyright © 2024 Paksa IT Solutions

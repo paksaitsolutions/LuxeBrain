@@ -15,5 +15,8 @@
   "devDependencies": {
     "turbo": "^1.11.0",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "react-hot-toast": "^2.6.0"
   }
 }

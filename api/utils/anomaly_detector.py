@@ -6,7 +6,6 @@ Copyright © 2024 Paksa IT Solutions
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from config.database import SessionLocal
-from api.models.database_models import Tenant
 import redis
 import json
 import os

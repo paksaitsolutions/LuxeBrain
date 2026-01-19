@@ -2,7 +2,8 @@
 API Usage Analytics
 Copyright © 2024 Paksa IT Solutions. All Rights Reserved.
 """
-from api.models.database_models import ApiLog, SessionLocal
+from api.models.database_models import ApiLog
+from config.database import SessionLocal
 from datetime import datetime, timedelta
 from sqlalchemy import func, and_
 

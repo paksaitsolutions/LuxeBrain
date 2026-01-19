@@ -1,3 +1,4 @@
+'use client';
 /**
  * Tooltip Component
  * Copyright © 2024 Paksa IT Solutions

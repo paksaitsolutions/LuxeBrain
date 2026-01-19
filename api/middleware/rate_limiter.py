@@ -52,7 +52,8 @@ class RateLimiter:
     def _log_rate_limit_block(self, ip: str, request_count: int):
         """Log rate limit block to database"""
         try:
-            from api.models.database_models import RateLimitLog, SessionLocal
+            from api.models.database_models import RateLimitLog
+            from config.database import SessionLocal
             db = SessionLocal()
             try:
                 log = RateLimitLog(

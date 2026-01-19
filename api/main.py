@@ -22,6 +22,8 @@ from api.middleware.usage_tracking import UsageTrackingMiddleware
 from api.middleware.plan_limits import PlanLimitsMiddleware
 from api.middleware.request_id import RequestIDMiddleware
 from api.middleware.deprecation import DeprecationMiddleware
+from api.middleware.performance import PerformanceMiddleware
+from api.middleware.bot_detection import BotDetectionMiddleware
 from config.settings import settings
 import os
 
