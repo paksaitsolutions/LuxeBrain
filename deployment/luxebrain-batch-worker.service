@@ -1,0 +1,25 @@
+# Batch Inference Worker Service
+# Copyright © 2024 Paksa IT Solutions
+#
+# Installation:
+# 1. Copy to /etc/systemd/system/luxebrain-batch-worker.service
+# 2. Update paths and user
+# 3. sudo systemctl daemon-reload
+# 4. sudo systemctl enable luxebrain-batch-worker
+# 5. sudo systemctl start luxebrain-batch-worker
+
+[Unit]
+Description=LuxeBrain Batch Inference Worker
+After=network.target redis.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/LuxeBrain
+Environment="PATH=/var/www/LuxeBrain/venv/bin"
+ExecStart=/var/www/LuxeBrain/venv/bin/python ml_models/recommendation/batch_worker.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

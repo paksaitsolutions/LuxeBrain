@@ -1,0 +1,59 @@
+[
+  {
+    "id": 1,
+    "woocommerce_id": 301,
+    "customer_id": 1,
+    "total": 89.99,
+    "status": "completed",
+    "payment_method": "credit_card",
+    "items": [
+      {"product_id": 1, "quantity": 1, "price": 89.99}
+    ]
+  },
+  {
+    "id": 2,
+    "woocommerce_id": 302,
+    "customer_id": 2,
+    "total": 209.98,
+    "status": "completed",
+    "payment_method": "paypal",
+    "items": [
+      {"product_id": 2, "quantity": 1, "price": 129.99},
+      {"product_id": 3, "quantity": 1, "price": 79.99}
+    ]
+  },
+  {
+    "id": 3,
+    "woocommerce_id": 303,
+    "customer_id": 1,
+    "total": 149.98,
+    "status": "completed",
+    "payment_method": "credit_card",
+    "items": [
+      {"product_id": 4, "quantity": 2, "price": 59.99}
+    ]
+  },
+  {
+    "id": 4,
+    "woocommerce_id": 304,
+    "customer_id": 3,
+    "total": 89.99,
+    "status": "completed",
+    "payment_method": "credit_card",
+    "items": [
+      {"product_id": 1, "quantity": 1, "price": 89.99}
+    ]
+  },
+  {
+    "id": 5,
+    "woocommerce_id": 305,
+    "customer_id": 2,
+    "total": 279.98,
+    "status": "completed",
+    "payment_method": "credit_card",
+    "items": [
+      {"product_id": 5, "quantity": 1, "price": 199.99},
+      {"product_id": 3, "quantity": 1, "price": 79.99}
+    ]
+  }
+]

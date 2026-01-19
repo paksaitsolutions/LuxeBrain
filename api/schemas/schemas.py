@@ -3,7 +3,7 @@ API Schemas
 Copyright © 2024 Paksa IT Solutions
 """
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -69,5 +69,18 @@ class VisualSearchRequest(BaseModel):
 
 
 class WebhookPayload(BaseModel):
-    event: str
+    event: str = Field(..., min_length=1, max_length=100)
     data: Dict[str, Any]
+    
+    @validator('event')
+    def validate_event(cls, v):
+        allowed_events = ['order.created', 'customer.updated', 'product.updated']
+        if v not in allowed_events:
+            raise ValueError(f'Invalid event type: {v}')
+        return v
+    
+    @validator('data')
+    def validate_data(cls, v):
+        if not v or not isinstance(v, dict):
+            raise ValueError('Data must be a non-empty dictionary')
+        return v

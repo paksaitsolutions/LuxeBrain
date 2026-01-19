@@ -1,4 +1,6 @@
 import { MetricCard } from '@/components/metrics/metric-card';
+import { UsageWidget } from '@luxebrain/ui/UsageWidget';
+import { ModelPerformanceWidget } from '@luxebrain/ui/ModelPerformanceWidget';
 
 export default async function OverviewPage() {
   const metrics = {
@@ -42,9 +44,15 @@ export default async function OverviewPage() {
         />
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-bold mb-4">Revenue Chart</h2>
-        <p className="text-gray-600">Chart implementation here</p>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4">Revenue Chart</h2>
+          <p className="text-gray-600">Chart implementation here</p>
+        </div>
+        <div className="space-y-4">
+          <UsageWidget />
+          <ModelPerformanceWidget />
+        </div>
       </div>
     </div>
   );

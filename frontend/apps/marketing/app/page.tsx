@@ -27,7 +27,7 @@ export default function HomePage() {
       {/* Social Proof */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-3 gap-8 text-center">
+          <div className="grid grid-cols-4 gap-8 text-center">
             <div>
               <p className="text-5xl font-bold text-blue-600">+15%</p>
               <p className="text-gray-600 mt-2">Average Order Value</p>
@@ -39,6 +39,10 @@ export default function HomePage() {
             <div>
               <p className="text-5xl font-bold text-pink-600">300%+</p>
               <p className="text-gray-600 mt-2">Return on Investment</p>
+            </div>
+            <div>
+              <p className="text-5xl font-bold text-green-600">92%</p>
+              <p className="text-gray-600 mt-2">Model Accuracy</p>
             </div>
           </div>
         </div>

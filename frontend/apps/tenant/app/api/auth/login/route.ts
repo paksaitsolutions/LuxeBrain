@@ -3,7 +3,7 @@ import { createToken } from '@luxebrain/auth/jwt';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const { email, password, rememberMe } = await request.json();
 
     const response = await fetch(`${process.env.API_URL}/api/v1/auth/login`, {
       method: 'POST',
@@ -23,12 +23,19 @@ export async function POST(request: NextRequest) {
       email: data.email,
     });
 
-    const res = NextResponse.json({ success: true, role: data.role });
-    res.cookies.set('auth_token', token, {
+    const maxAge = rememberMe ? 60 * 60 * 24 * 7 : 60 * 60 * 24;
+
+    const res = NextResponse.json({ 
+      success: true, 
+      role: data.role,
+      refresh_token: data.refresh_token 
+    });
+    
+    res.cookies.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7,
+      sameSite: 'lax',
+      maxAge,
     });
 
     return res;

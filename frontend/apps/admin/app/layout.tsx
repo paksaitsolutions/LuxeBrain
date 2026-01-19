@@ -1,5 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import { ErrorBoundary } from '@luxebrain/ui/ErrorBoundary';
+import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   title: 'LuxeBrain AI - Admin Panel',
@@ -9,7 +11,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
+        <Toaster position="top-right" />
+      </body>
     </html>
   );
 }

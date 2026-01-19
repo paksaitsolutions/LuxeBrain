@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "woocommerce_id": 101,
+    "name": "Floral Summer Dress",
+    "sku": "FSD-001",
+    "price": 89.99,
+    "sale_price": null,
+    "category": "Dresses",
+    "stock_quantity": 25,
+    "image_url": "https://example.com/dress1.jpg",
+    "attributes": {"size": ["S", "M", "L"], "color": ["Blue", "Pink"]}
+  },
+  {
+    "id": 2,
+    "woocommerce_id": 102,
+    "name": "Leather Handbag",
+    "sku": "LHB-001",
+    "price": 149.99,
+    "sale_price": 129.99,
+    "category": "Accessories",
+    "stock_quantity": 15,
+    "image_url": "https://example.com/bag1.jpg",
+    "attributes": {"color": ["Black", "Brown"]}
+  },
+  {
+    "id": 3,
+    "woocommerce_id": 103,
+    "name": "High Heel Sandals",
+    "sku": "HHS-001",
+    "price": 79.99,
+    "sale_price": null,
+    "category": "Shoes",
+    "stock_quantity": 30,
+    "image_url": "https://example.com/shoes1.jpg",
+    "attributes": {"size": ["6", "7", "8", "9"], "color": ["Red", "Black"]}
+  },
+  {
+    "id": 4,
+    "woocommerce_id": 104,
+    "name": "Silk Blouse",
+    "sku": "SB-001",
+    "price": 69.99,
+    "sale_price": 59.99,
+    "category": "Tops",
+    "stock_quantity": 40,
+    "image_url": "https://example.com/blouse1.jpg",
+    "attributes": {"size": ["XS", "S", "M", "L"], "color": ["White", "Cream"]}
+  },
+  {
+    "id": 5,
+    "woocommerce_id": 105,
+    "name": "Designer Sunglasses",
+    "sku": "DS-001",
+    "price": 199.99,
+    "sale_price": null,
+    "category": "Accessories",
+    "stock_quantity": 20,
+    "image_url": "https://example.com/sunglasses1.jpg",
+    "attributes": {"color": ["Black", "Tortoise"]}
+  }
+]

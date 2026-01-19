@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { verifyToken } from './jwt';
 
 export async function authMiddleware(request: NextRequest) {
-  const token = request.cookies.get('auth_token')?.value;
+  const token = request.cookies.get('token')?.value;
 
   if (!token) {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -12,7 +12,7 @@ export async function authMiddleware(request: NextRequest) {
   try {
     const payload = await verifyToken(token);
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-tenant-id', payload.tenant_id);
+    requestHeaders.set('x-tenant-id', payload.tenant_id || '');
     requestHeaders.set('x-user-role', payload.role);
     requestHeaders.set('x-user-id', payload.user_id);
 
@@ -26,12 +26,22 @@ export async function authMiddleware(request: NextRequest) {
 
 export function withRole(allowedRoles: string[]) {
   return async (request: NextRequest) => {
-    const role = request.headers.get('x-user-role');
+    const token = request.cookies.get('token')?.value;
 
-    if (!role || !allowedRoles.includes(role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    return NextResponse.next();
+    try {
+      const payload = await verifyToken(token);
+      
+      if (!allowedRoles.includes(payload.role)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
+      return NextResponse.next();
+    } catch {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
   };
 }

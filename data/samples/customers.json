@@ -1,0 +1,57 @@
+[
+  {
+    "id": 1,
+    "woocommerce_id": 201,
+    "email": "sarah.johnson@example.com",
+    "first_name": "Sarah",
+    "last_name": "Johnson",
+    "total_spent": 450.50,
+    "order_count": 5,
+    "segment": "segment_1",
+    "lifetime_value": 675.75
+  },
+  {
+    "id": 2,
+    "woocommerce_id": 202,
+    "email": "emily.davis@example.com",
+    "first_name": "Emily",
+    "last_name": "Davis",
+    "total_spent": 1250.00,
+    "order_count": 12,
+    "segment": "segment_0",
+    "lifetime_value": 1875.00
+  },
+  {
+    "id": 3,
+    "woocommerce_id": 203,
+    "email": "jessica.wilson@example.com",
+    "first_name": "Jessica",
+    "last_name": "Wilson",
+    "total_spent": 180.00,
+    "order_count": 2,
+    "segment": "segment_3",
+    "lifetime_value": 270.00
+  },
+  {
+    "id": 4,
+    "woocommerce_id": 204,
+    "email": "amanda.brown@example.com",
+    "first_name": "Amanda",
+    "last_name": "Brown",
+    "total_spent": 320.75,
+    "order_count": 4,
+    "segment": "segment_2",
+    "lifetime_value": 481.13
+  },
+  {
+    "id": 5,
+    "woocommerce_id": 205,
+    "email": "michelle.taylor@example.com",
+    "first_name": "Michelle",
+    "last_name": "Taylor",
+    "total_spent": 95.00,
+    "order_count": 1,
+    "segment": "segment_4",
+    "lifetime_value": 142.50
+  }
+]

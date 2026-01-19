@@ -136,3 +136,182 @@ class ModelMetrics(Base):
     metric_name = Column(String)
     metric_value = Column(Float)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+
+class ModelVersion(Base):
+    __tablename__ = "model_versions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    model_name = Column(String, index=True)
+    version = Column(String, index=True)
+    file_path = Column(String)
+    is_active = Column(Boolean, default=False)
+    ab_test_percentage = Column(Float, default=0.0)  # 0-100
+    performance_score = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    deployed_at = Column(DateTime, nullable=True)
+    model_metadata = Column(JSON, nullable=True)
+
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    password_hash = Column(String)
+    role = Column(String)  # admin, tenant
+    tenant_id = Column(String, nullable=True, index=True)
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime, nullable=True)
+    email_verified = Column(Boolean, default=False)
+    verification_token = Column(String, nullable=True)
+    oauth_provider = Column(String, nullable=True)  # google, github
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PasswordHistory(Base):
+    __tablename__ = "password_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    password_hash = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class LoginAttempt(Base):
+    __tablename__ = "login_attempts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, index=True)
+    ip_address = Column(String)
+    user_agent = Column(String, nullable=True)
+    success = Column(Boolean)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class SecurityAuditLog(Base):
+    __tablename__ = "security_audit_log"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    event_type = Column(String, index=True)  # login, logout, password_change, permission_change
+    user_id = Column(Integer, nullable=True)
+    tenant_id = Column(String, nullable=True, index=True)
+    ip_address = Column(String)
+    details = Column(JSON, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class UndoAction(Base):
+    __tablename__ = "undo_actions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    undo_id = Column(String, unique=True, index=True)
+    action_type = Column(String, index=True)
+    data = Column(JSON)
+    tenant_id = Column(String, index=True)
+    user_id = Column(Integer, nullable=True)
+    executed = Column(Boolean, default=False)
+    expires_at = Column(DateTime, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    executed_at = Column(DateTime, nullable=True)
+
+
+class BotDetection(Base):
+    __tablename__ = "bot_detections"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String, index=True)
+    user_agent = Column(Text)
+    endpoint = Column(String)
+    reason = Column(String)  # bot_pattern, flooding, suspicious
+    request_count = Column(Integer)
+    blocked_until = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class HoneypotDetection(Base):
+    __tablename__ = "honeypot_detections"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String, index=True)
+    user_agent = Column(Text)
+    email = Column(String)
+    honeypot_value = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class RateLimitLog(Base):
+    __tablename__ = "rate_limit_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String, index=True)
+    user_agent = Column(Text)
+    endpoint = Column(String)
+    request_count = Column(Integer)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ApiLog(Base):
+    __tablename__ = "api_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    method = Column(String, index=True)
+    endpoint = Column(String, index=True)
+    status_code = Column(Integer, index=True)
+    response_time = Column(Float)
+    tenant_id = Column(String, nullable=True, index=True)
+    user_id = Column(String, nullable=True)
+    ip_address = Column(String)
+    user_agent = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class SlowQueryLog(Base):
+    __tablename__ = "slow_query_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    method = Column(String)
+    endpoint = Column(String, index=True)
+    duration = Column(Float, index=True)
+    tenant_id = Column(String, nullable=True, index=True)
+    query_params = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class DeprecatedApiLog(Base):
+    __tablename__ = "deprecated_api_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    endpoint = Column(String, index=True)
+    method = Column(String)
+    tenant_id = Column(String, nullable=True, index=True)
+    sunset_date = Column(String)
+    replacement = Column(String)
+    ip_address = Column(String)
+    user_agent = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ModelIsolationRequest(Base):
+    __tablename__ = "model_isolation_requests"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String, index=True)
+    model_name = Column(String)
+    status = Column(String, default="pending")  # pending, approved, rejected
+    reason = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    reviewed_at = Column(DateTime, nullable=True)
+    reviewed_by = Column(Integer, nullable=True)
+
+
+class AnomalyResolution(Base):
+    __tablename__ = "anomaly_resolutions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    anomaly_id = Column(String, index=True)
+    status = Column(String)  # resolved, ignored
+    notes = Column(Text, nullable=True)
+    resolved_at = Column(DateTime, default=datetime.utcnow)
+    resolved_by = Column(Integer, nullable=True)

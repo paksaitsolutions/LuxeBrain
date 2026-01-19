@@ -20,17 +20,23 @@ class ABTestingFramework:
             'recommendation_engine': {
                 'control': 'random_products',
                 'treatment': 'ai_recommendations',
-                'split': 0.5  # 50/50 split
+                'split': 0.5,
+                'status': 'active',
+                'winner': None
             },
             'dynamic_pricing': {
                 'control': 'fixed_pricing',
                 'treatment': 'ai_pricing',
-                'split': 0.3  # 30% get AI pricing
+                'split': 0.3,
+                'status': 'active',
+                'winner': None
             },
             'personalized_homepage': {
                 'control': 'standard_homepage',
                 'treatment': 'ai_personalized',
-                'split': 0.5
+                'split': 0.5,
+                'status': 'active',
+                'winner': None
             }
         }
     
@@ -177,6 +183,89 @@ class ABTestingFramework:
         if control_value == 0:
             return 0.0
         return ((treatment_value - control_value) / control_value) * 100
+    
+    def auto_select_winner(self, experiment: str, min_sample_size: int = 100) -> Dict:
+        """Automatically select winning variant based on statistical significance"""
+        from config.database import SessionLocal
+        
+        db = SessionLocal()
+        results = self.calculate_experiment_results(experiment, days=30, db=db)
+        
+        control = results['control']
+        treatment = results['treatment']
+        
+        # Check minimum sample size
+        if control['customers'] < min_sample_size or treatment['customers'] < min_sample_size:
+            return {
+                'experiment': experiment,
+                'winner': None,
+                'reason': 'Insufficient sample size',
+                'recommendation': 'Continue experiment'
+            }
+        
+        # Calculate statistical significance (simplified)
+        revenue_lift = results['lift']['revenue']
+        conversion_lift = results['lift']['conversion_rate']
+        
+        # Winner criteria: >10% lift in revenue or conversion
+        if revenue_lift > 10 and conversion_lift > 5:
+            winner = 'treatment'
+            self.experiments[experiment]['winner'] = winner
+            self.experiments[experiment]['status'] = 'completed'
+            
+            return {
+                'experiment': experiment,
+                'winner': winner,
+                'revenue_lift': revenue_lift,
+                'conversion_lift': conversion_lift,
+                'recommendation': 'Deploy treatment to 100% of users'
+            }
+        elif revenue_lift < -5 or conversion_lift < -5:
+            winner = 'control'
+            self.experiments[experiment]['winner'] = winner
+            self.experiments[experiment]['status'] = 'completed'
+            
+            return {
+                'experiment': experiment,
+                'winner': winner,
+                'revenue_lift': revenue_lift,
+                'conversion_lift': conversion_lift,
+                'recommendation': 'Keep control, treatment underperforms'
+            }
+        else:
+            return {
+                'experiment': experiment,
+                'winner': None,
+                'revenue_lift': revenue_lift,
+                'conversion_lift': conversion_lift,
+                'recommendation': 'No clear winner, continue experiment'
+            }
+    
+    def get_experiment_status(self, experiment: str) -> Dict:
+        """Get current status of experiment"""
+        if experiment not in self.experiments:
+            return {'error': 'Experiment not found'}
+        
+        exp = self.experiments[experiment]
+        return {
+            'experiment': experiment,
+            'status': exp.get('status', 'active'),
+            'winner': exp.get('winner'),
+            'split': exp['split'],
+            'control': exp['control'],
+            'treatment': exp['treatment']
+        }
+    
+    def create_experiment(self, name: str, control: str, treatment: str, split: float = 0.5):
+        """Create new A/B test experiment"""
+        self.experiments[name] = {
+            'control': control,
+            'treatment': treatment,
+            'split': split,
+            'status': 'active',
+            'winner': None
+        }
+        return {'experiment': name, 'status': 'created'}
 
 
 class ROIDashboard:

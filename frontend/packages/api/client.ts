@@ -15,23 +15,47 @@ class LuxeBrainAPI {
     this.token = token;
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}, retries = 3): Promise<T> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...(this.token && { Authorization: `Bearer ${this.token}` }),
       ...options.headers,
     };
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`);
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(`${this.baseURL}${endpoint}`, {
+          ...options,
+          headers,
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.statusText}`);
+        }
+
+        clearTimeout(timeout);
+        return response.json();
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          clearTimeout(timeout);
+          throw new Error('Request timeout after 30 seconds');
+        }
+        const isNetworkError = error instanceof TypeError || (error as any).message?.includes('fetch');
+        if (!isNetworkError || attempt === retries) {
+          clearTimeout(timeout);
+          throw error;
+        }
+        
+        const delay = Math.pow(2, attempt) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
-
-    return response.json();
+    clearTimeout(timeout);
+    throw new Error('Max retries reached');
   }
 
   async getRecommendations(customerId: number, limit: number = 10) {
