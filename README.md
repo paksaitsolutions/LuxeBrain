@@ -227,7 +227,7 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 ## 📞 Support
 
 For technical support or inquiries:
-- Email: support@paksait.com
+- Email: support@paks.com.pk
 - Documentation: https://docs.luxebrain.ai
 - Issue Tracker: Internal only
 
