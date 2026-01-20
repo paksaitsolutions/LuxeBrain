@@ -2,70 +2,93 @@
 
 import { useEffect, useState } from 'react';
 
-export default function RevenuePage() {
-  const [revenue, setRevenue] = useState({ mrr: 0, by_plan: { basic: 0, premium: 0, enterprise: 0 } });
-  const [overage, setOverage] = useState({ tenants: [], total_overage_revenue: 0 });
+export default function RevenueAnalyticsPage() {
+  const [stats, setStats] = useState<any>(null);
+  const [byPlan, setByPlan] = useState<any>(null);
+  const [trends, setTrends] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/admin/billing/revenue', {
-        headers: { 'Authorization': `Bearer ${document.cookie.split('token=')[1]?.split(';')[0]}` }
-      }).then(res => res.json()),
-      fetch('/api/metering/admin/overage-summary', {
-        headers: { 'Authorization': `Bearer ${document.cookie.split('token=')[1]?.split(';')[0]}` }
-      }).then(res => res.json())
-    ])
-      .then(([revenueData, overageData]) => {
-        setRevenue(revenueData);
-        setOverage(overageData);
-      })
-      .finally(() => setLoading(false));
+    loadData();
   }, []);
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  const loadData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { 'Authorization': `Bearer ${token}` };
 
-  const arr = revenue.mrr * 12;
-  const totalTenants = revenue.by_plan.basic + revenue.by_plan.premium + revenue.by_plan.enterprise;
+      const [statsRes, planRes, trendsRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/revenue/stats`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/revenue/by-plan`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/revenue/trends?days=30`, { headers })
+      ]);
+
+      setStats(await statsRes.json());
+      setByPlan(await planRes.json());
+      setTrends((await trendsRes.json()).trends);
+    } catch (error) {
+      console.error('Failed to load revenue data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <div className="p-6">Loading...</div>;
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Revenue Analytics</h1>
-      
-      <div className="grid grid-cols-4 gap-4">
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-600">MRR</h3>
-          <p className="text-3xl font-bold mt-2">${revenue.mrr.toLocaleString()}</p>
+          <div className="text-sm text-gray-600">Monthly Recurring Revenue</div>
+          <div className="text-3xl font-bold mt-2">${stats?.mrr || 0}</div>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-600">ARR</h3>
-          <p className="text-3xl font-bold mt-2">${arr.toLocaleString()}</p>
+          <div className="text-sm text-gray-600">Total Revenue</div>
+          <div className="text-3xl font-bold mt-2">${stats?.total_revenue || 0}</div>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-600">Overage Revenue</h3>
-          <p className="text-3xl font-bold mt-2 text-green-600">${overage.total_overage_revenue.toLocaleString()}</p>
+          <div className="text-sm text-gray-600">This Month</div>
+          <div className="text-3xl font-bold mt-2">${stats?.monthly_revenue || 0}</div>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-600">Total Tenants</h3>
-          <p className="text-3xl font-bold mt-2">{totalTenants}</p>
+          <div className="text-sm text-gray-600">Churn Rate</div>
+          <div className="text-3xl font-bold mt-2">{stats?.churn_rate || 0}%</div>
         </div>
       </div>
 
+      {/* Revenue by Plan */}
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-xl font-bold mb-4">Revenue by Plan</h2>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span>Basic (Free)</span>
-            <span className="font-semibold">{revenue.by_plan.basic} tenants</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span>Premium ($99/mo)</span>
-            <span className="font-semibold">{revenue.by_plan.premium} tenants - ${revenue.by_plan.premium * 99}/mo</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span>Enterprise ($299/mo)</span>
-            <span className="font-semibold">{revenue.by_plan.enterprise} tenants - ${revenue.by_plan.enterprise * 299}/mo</span>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {byPlan && Object.entries(byPlan.by_plan).map(([plan, revenue]: any) => (
+            <div key={plan} className="border rounded p-4">
+              <div className="text-sm text-gray-600 capitalize">{plan}</div>
+              <div className="text-2xl font-bold">${revenue}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Revenue Trends */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-bold mb-4">Revenue Trends (30 Days)</h2>
+        <div className="space-y-2">
+          {trends.map((trend, i) => (
+            <div key={i} className="flex items-center gap-4">
+              <div className="w-24 text-sm text-gray-600">{trend.date}</div>
+              <div className="flex-1 bg-gray-200 rounded-full h-8">
+                <div 
+                  className="bg-green-600 h-8 rounded-full flex items-center justify-end px-3 text-white text-sm font-medium"
+                  style={{ width: `${Math.min((trend.revenue / 1000) * 100, 100)}%` }}
+                >
+                  ${trend.revenue}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

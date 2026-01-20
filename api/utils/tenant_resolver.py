@@ -5,30 +5,13 @@ Copyright © 2024 Paksa IT Solutions
 
 from typing import Optional, Dict
 from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+from config.database import SessionLocal
+from api.models.database_models import Tenant
 
 # In-memory cache (use Redis in production)
 _tenant_cache: Dict[str, Dict] = {}
 _cache_ttl = timedelta(minutes=15)
-
-# Mock tenant database (replace with actual DB queries)
-TENANTS_DB = {
-    "tenant_1": {
-        "id": "tenant_1",
-        "name": "Demo Store",
-        "email": "demo@store.com",
-        "status": "active",
-        "plan": "premium",
-        "created_at": "2024-01-01T00:00:00Z"
-    },
-    "tenant_2": {
-        "id": "tenant_2",
-        "name": "Fashion Boutique",
-        "email": "contact@boutique.com",
-        "status": "active",
-        "plan": "basic",
-        "created_at": "2024-01-15T00:00:00Z"
-    }
-}
 
 
 class TenantResolver:
@@ -46,16 +29,40 @@ class TenantResolver:
             return cached['data']
         
         # Fetch from database
-        tenant = TENANTS_DB.get(tenant_id)
+        db = SessionLocal()
+        try:
+            tenant = db.query(Tenant).filter(Tenant.tenant_id == tenant_id).first()
+            
+            if tenant:
+                tenant_data = {
+                    "id": tenant.tenant_id,
+                    "name": tenant.name,
+                    "email": tenant.email,
+                    "status": tenant.status,
+                    "plan": tenant.plan,
+                    "api_key": tenant.api_key,
+                    "company_name": tenant.company_name,
+                    "company_website": tenant.company_website,
+                    "company_phone": tenant.company_phone,
+                    "industry": tenant.industry,
+                    "address": tenant.address or {},
+                    "poc": tenant.poc or {},
+                    "tax_info": tenant.tax_info or {},
+                    "woocommerce": tenant.woocommerce or {},
+                    "created_at": tenant.created_at.isoformat() if tenant.created_at else None
+                }
+                
+                # Cache tenant data
+                _tenant_cache[tenant_id] = {
+                    'data': tenant_data,
+                    'expires_at': datetime.utcnow() + _cache_ttl
+                }
+                
+                return tenant_data
+        finally:
+            db.close()
         
-        if tenant:
-            # Cache tenant data
-            _tenant_cache[tenant_id] = {
-                'data': tenant,
-                'expires_at': datetime.utcnow() + _cache_ttl
-            }
-        
-        return tenant
+        return None
     
     @staticmethod
     def is_active(tenant_id: str) -> bool:

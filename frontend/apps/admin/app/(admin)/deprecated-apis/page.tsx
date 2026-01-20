@@ -1,12 +1,6 @@
 "use client";
 
-/**
- * Deprecated APIs Monitoring Page
- * Copyright © 2024 Paksa IT Solutions. All Rights Reserved.
- */
-
 import { useState, useEffect } from "react";
-import { apiClient } from "@repo/api/client";
 
 export default function DeprecatedApisPage() {
   const [endpoints, setEndpoints] = useState<any[]>([]);
@@ -20,15 +14,24 @@ export default function DeprecatedApisPage() {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (tenantFilter) params.append("tenant_id", tenantFilter);
       if (endpointFilter) params.append("endpoint", endpointFilter);
 
       const [endpointsRes, usageRes, statsRes, tenantsRes] = await Promise.all([
-        apiClient("/api/admin/deprecated-apis/list"),
-        apiClient(`/api/admin/deprecated-apis/usage?${params.toString()}`),
-        apiClient("/api/admin/deprecated-apis/stats"),
-        apiClient("/api/admin/deprecated-apis/tenants-affected"),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/deprecated-apis/list`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/deprecated-apis/usage?${params.toString()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/deprecated-apis/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/deprecated-apis/tenants-affected`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
       ]);
 
       setEndpoints(endpointsRes);

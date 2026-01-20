@@ -5,7 +5,6 @@ Copyright © 2024 Paksa IT Solutions
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from api.utils.usage_meter import UsageMeter
-from api.utils.tenant_resolver import TENANTS_DB
 from api.utils.usage_tracker import UsageTracker
 
 scheduler = BackgroundScheduler()
@@ -15,7 +14,7 @@ def report_daily_usage():
     """Report daily usage to Stripe for all tenants"""
     print("📊 Running daily usage report...")
     
-    for tenant_id, tenant_data in TENANTS_DB.items():
+    # TODO: Migrate to database - for tenant_id, tenant_data in TENANTS_DB.items():
         if tenant_data.get("status") != "active":
             continue
         
@@ -41,7 +40,7 @@ def generate_monthly_invoices():
     """Generate overage invoices at end of month"""
     print("💰 Generating monthly overage invoices...")
     
-    for tenant_id, tenant_data in TENANTS_DB.items():
+    # TODO: Migrate to database - for tenant_id, tenant_data in TENANTS_DB.items():
         if tenant_data.get("status") != "active":
             continue
         

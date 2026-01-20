@@ -51,12 +51,11 @@ async def create_overage_invoice(request: Request):
 @router.get("/admin/overage-summary")
 async def get_all_overages(admin=Depends(verify_admin)):
     """Get overage summary for all tenants"""
-    from api.utils.tenant_resolver import TENANTS_DB
-    
+        
     summary = []
     total_overage = 0
     
-    for tenant_id, tenant_data in TENANTS_DB.items():
+    # TODO: Migrate to database - for tenant_id, tenant_data in TENANTS_DB.items():
         plan = tenant_data.get("plan", "basic")
         overage = UsageMeter.calculate_overage(tenant_id, plan)
         

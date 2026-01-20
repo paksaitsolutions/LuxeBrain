@@ -233,6 +233,27 @@ class PasswordResetConfirm(BaseModel):
     new_password: str
 
 
+class PasswordUpdateRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+async def check_password_breach(password: str) -> bool:
+    """Check if password has been breached using Have I Been Pwned API"""
+    import hashlib
+    sha1_hash = hashlib.sha1(password.encode()).hexdigest().upper()
+    prefix, suffix = sha1_hash[:5], sha1_hash[5:]
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"https://api.pwnedpasswords.com/range/{prefix}")
+            if suffix in response.text:
+                return True
+    except:
+        pass
+    return False
+
+
 @router.post("/password-reset")
 async def request_password_reset(request: PasswordResetRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == request.email).first()
@@ -267,6 +288,14 @@ async def confirm_password_reset(request: PasswordResetConfirm, req: Request, db
         if not user or request.token not in RESET_TOKENS:
             raise HTTPException(status_code=400, detail="Invalid or expired token")
         
+        # Check password strength
+        if len(request.new_password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        
+        # Check if password has been breached
+        if await check_password_breach(request.new_password):
+            raise HTTPException(status_code=400, detail="This password has been found in data breaches. Please choose a different password")
+        
         # Check password history
         recent_passwords = db.query(PasswordHistory).filter(
             PasswordHistory.user_id == user.id
@@ -291,6 +320,61 @@ async def confirm_password_reset(request: PasswordResetConfirm, req: Request, db
         return {"message": "Password reset successful"}
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+
+@router.post("/password-update")
+async def update_password(request: PasswordUpdateRequest, req: Request, db: Session = Depends(get_db)):
+    """Update password with security checks"""
+    ip = req.client.host if req.client else "unknown"
+    auth_header = req.headers.get("authorization", "")
+    
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = auth_header[7:]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        user = db.query(User).filter(User.email == email).first()
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Verify current password
+        if not pwd_context.verify(request.current_password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Current password is incorrect")
+        
+        # Check password strength
+        if len(request.new_password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        
+        # Check if password has been breached
+        if await check_password_breach(request.new_password):
+            raise HTTPException(status_code=400, detail="This password has been found in data breaches. Please choose a different password")
+        
+        # Check password history (last 5 passwords)
+        recent_passwords = db.query(PasswordHistory).filter(
+            PasswordHistory.user_id == user.id
+        ).order_by(PasswordHistory.created_at.desc()).limit(5).all()
+        
+        for pwd_hist in recent_passwords:
+            if pwd_context.verify(request.new_password, pwd_hist.password_hash):
+                raise HTTPException(status_code=400, detail="Cannot reuse any of your last 5 passwords")
+        
+        # Update password
+        user.password_hash = pwd_context.hash(request.new_password)
+        db.commit()
+        
+        # Add to password history
+        pwd_history = PasswordHistory(user_id=user.id, password_hash=user.password_hash)
+        db.add(pwd_history)
+        db.commit()
+        
+        log_security_event(db, "password_change", user.id, user.tenant_id, ip)
+        
+        return {"message": "Password updated successfully"}
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 class RefreshTokenRequest(BaseModel):

@@ -12,7 +12,13 @@ import hashlib
 CSRF_TOKENS = {}
 
 class CSRFMiddleware(BaseHTTPMiddleware):
+    EXCLUDED_PATHS = ["/api/v1/auth/", "/api/v1/webhooks/", "/webhooks/"]
+    
     async def dispatch(self, request: Request, call_next):
+        # Skip CSRF for excluded paths
+        if any(request.url.path.startswith(path) for path in self.EXCLUDED_PATHS):
+            return await call_next(request)
+        
         if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
             csrf_token = request.headers.get('X-CSRF-Token')
             

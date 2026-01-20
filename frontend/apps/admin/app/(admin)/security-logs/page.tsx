@@ -1,12 +1,6 @@
 "use client";
 
-/**
- * Security Audit Log Viewer
- * Copyright © 2024 Paksa IT Solutions. All Rights Reserved.
- */
-
 import { useState, useEffect } from "react";
-import { apiClient } from "@repo/api/client";
 
 export default function SecurityLogsPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -21,6 +15,7 @@ export default function SecurityLogsPage() {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (eventTypeFilter) params.append("event_type", eventTypeFilter);
       if (userIdFilter) params.append("user_id", userIdFilter);
@@ -28,9 +23,15 @@ export default function SecurityLogsPage() {
       params.append("days", daysFilter.toString());
 
       const [logsRes, statsRes, typesRes] = await Promise.all([
-        apiClient(`/api/admin/security-logs/recent?${params.toString()}`),
-        apiClient("/api/admin/security-logs/stats"),
-        apiClient("/api/admin/security-logs/event-types"),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/security-logs/recent?${params.toString()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/security-logs/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/security-logs/event-types`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
       ]);
 
       setLogs(logsRes);

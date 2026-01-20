@@ -1,12 +1,6 @@
 "use client";
 
-/**
- * Slow Query Monitoring Page
- * Copyright © 2024 Paksa IT Solutions. All Rights Reserved.
- */
-
 import { useState, useEffect } from "react";
-import { apiClient } from "@repo/api/client";
 
 export default function SlowQueriesPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -19,14 +13,21 @@ export default function SlowQueriesPage() {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (tenantFilter) params.append("tenant_id", tenantFilter);
       if (endpointFilter) params.append("endpoint", endpointFilter);
 
       const [logsRes, statsRes, endpointsRes] = await Promise.all([
-        apiClient(`/api/admin/slow-queries/recent?${params.toString()}`),
-        apiClient("/api/admin/slow-queries/stats"),
-        apiClient("/api/admin/slow-queries/slowest-endpoints"),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/slow-queries/recent?${params.toString()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/slow-queries/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/slow-queries/slowest-endpoints`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
       ]);
 
       setLogs(logsRes);

@@ -1,12 +1,6 @@
 "use client";
 
-/**
- * API Usage Analytics Dashboard
- * Copyright © 2024 Paksa IT Solutions. All Rights Reserved.
- */
-
 import { useState, useEffect } from "react";
-import { apiClient } from "@repo/api/client";
 
 export default function AnalyticsPage() {
   const [hourlyData, setHourlyData] = useState<any[]>([]);
@@ -19,10 +13,10 @@ export default function AnalyticsPage() {
   const fetchData = async () => {
     try {
       const [hourlyRes, statusRes, endpointRes, tenantRes] = await Promise.all([
-        apiClient(`/api/admin/analytics/hourly?hours=${timeRange}`),
-        apiClient("/api/admin/analytics/status-distribution"),
-        apiClient("/api/admin/analytics/endpoint-performance"),
-        apiClient("/api/admin/analytics/tenant-analytics"),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/analytics/hourly?hours=${timeRange}`).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/analytics/status-distribution`).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/analytics/endpoint-performance`).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/analytics/tenant-analytics`).then(r => r.json()),
       ]);
 
       setHourlyData(hourlyRes);

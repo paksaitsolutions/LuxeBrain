@@ -1,12 +1,6 @@
 "use client";
 
-/**
- * API Logs Page
- * Copyright © 2024 Paksa IT Solutions. All Rights Reserved.
- */
-
 import { useState, useEffect } from "react";
-import { apiClient } from "@repo/api/client";
 
 export default function ApiLogsPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -15,7 +9,6 @@ export default function ApiLogsPage() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Filters
   const [tenantFilter, setTenantFilter] = useState("");
   const [endpointFilter, setEndpointFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -23,6 +16,7 @@ export default function ApiLogsPage() {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (tenantFilter) params.append("tenant_id", tenantFilter);
       if (endpointFilter) params.append("endpoint", endpointFilter);
@@ -30,10 +24,18 @@ export default function ApiLogsPage() {
       if (methodFilter) params.append("method", methodFilter);
 
       const [logsRes, statsRes, endpointsRes, tenantsRes] = await Promise.all([
-        apiClient(`/api/admin/api-logs/recent?${params.toString()}`),
-        apiClient("/api/admin/api-logs/stats"),
-        apiClient("/api/admin/api-logs/endpoints"),
-        apiClient("/api/admin/api-logs/tenants"),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/api-logs/recent?${params.toString()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/api-logs/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/api-logs/endpoints`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/api-logs/tenants`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
       ]);
 
       setLogs(logsRes);

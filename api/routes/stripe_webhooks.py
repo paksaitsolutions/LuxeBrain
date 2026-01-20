@@ -57,11 +57,10 @@ async def handle_subscription_updated(subscription):
     status = subscription['status']
     
     # Update in database (mock implementation)
-    from api.utils.tenant_resolver import TENANTS_DB
-    if tenant_id in TENANTS_DB:
-        TENANTS_DB[tenant_id]['plan'] = new_plan
-        TENANTS_DB[tenant_id]['subscription_status'] = status
-        TenantResolver.invalidate_cache(tenant_id)
+    # TODO: Migrate to database - if tenant_id in TENANTS_DB:
+    # TODO: Migrate to database - TENANTS_DB[tenant_id]['plan'] = new_plan
+    # TODO: Migrate to database - TENANTS_DB[tenant_id]['subscription_status'] = status
+    # TenantResolver.invalidate_cache(tenant_id)
     
     print(f"✅ Subscription updated for {tenant_id}: {new_plan} ({status})")
 
@@ -73,11 +72,10 @@ async def handle_subscription_deleted(subscription):
         return
     
     # Downgrade to basic plan
-    from api.utils.tenant_resolver import TENANTS_DB
-    if tenant_id in TENANTS_DB:
-        TENANTS_DB[tenant_id]['plan'] = 'basic'
-        TENANTS_DB[tenant_id]['subscription_status'] = 'canceled'
-        TenantResolver.invalidate_cache(tenant_id)
+    # TODO: Migrate to database - if tenant_id in TENANTS_DB:
+    # TODO: Migrate to database - TENANTS_DB[tenant_id]['plan'] = 'basic'
+    # TODO: Migrate to database - TENANTS_DB[tenant_id]['subscription_status'] = 'canceled'
+    # TenantResolver.invalidate_cache(tenant_id)
     
     print(f"⚠️ Subscription canceled for {tenant_id}")
 

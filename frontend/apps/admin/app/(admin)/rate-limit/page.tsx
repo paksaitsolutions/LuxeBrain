@@ -1,12 +1,6 @@
 "use client";
 
-/**
- * Rate Limit Monitoring Page
- * Copyright © 2024 Paksa IT Solutions. All Rights Reserved.
- */
-
 import { useState, useEffect } from "react";
-import { apiClient } from "@repo/api/client";
 
 export default function RateLimitPage() {
   const [stats, setStats] = useState<any>(null);
@@ -16,10 +10,17 @@ export default function RateLimitPage() {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem('token');
       const [statsRes, blocksRes, ipsRes] = await Promise.all([
-        apiClient("/api/admin/rate-limit/stats"),
-        apiClient("/api/admin/rate-limit/recent-blocks?limit=20"),
-        apiClient("/api/admin/rate-limit/top-ips?limit=10"),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/rate-limit/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/rate-limit/recent-blocks?limit=20`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/rate-limit/top-ips?limit=10`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()),
       ]);
 
       setStats(statsRes);
@@ -34,8 +35,10 @@ export default function RateLimitPage() {
 
   const unblockIp = async (ip: string) => {
     try {
-      await apiClient(`/api/admin/rate-limit/unblock/${ip}`, {
+      const token = localStorage.getItem('token');
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/rate-limit/unblock/${ip}`, {
         method: "POST",
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       fetchData();
     } catch (error) {
