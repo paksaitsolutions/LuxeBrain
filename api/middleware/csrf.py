@@ -12,9 +12,13 @@ import hashlib
 CSRF_TOKENS = {}
 
 class CSRFMiddleware(BaseHTTPMiddleware):
-    EXCLUDED_PATHS = ["/api/v1/auth/", "/api/v1/webhooks/", "/webhooks/"]
+    EXCLUDED_PATHS = ["/api/v1/auth/", "/api/v1/webhooks/", "/webhooks/", "/api/admin/", "/api/demo/"]
     
     async def dispatch(self, request: Request, call_next):
+        # Skip CSRF for OPTIONS (CORS preflight)
+        if request.method == 'OPTIONS':
+            return await call_next(request)
+        
         # Skip CSRF for excluded paths
         if any(request.url.path.startswith(path) for path in self.EXCLUDED_PATHS):
             return await call_next(request)

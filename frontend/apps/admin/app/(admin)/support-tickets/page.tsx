@@ -1,25 +1,48 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function SupportTicketsPage() {
+  const router = useRouter();
   const [tickets, setTickets] = useState<any[]>([]);
-  const [filter, setFilter] = useState('');
+  const [filteredTickets, setFilteredTickets] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterAssignee, setFilterAssignee] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTicket, setNewTicket] = useState({ tenant_id: '', subject: '', description: '', priority: 'medium' });
+  const [admins, setAdmins] = useState<any[]>([]);
 
   useEffect(() => {
     loadTickets();
-  }, [filter]);
+    loadAdmins();
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [tickets, searchTerm, filterStatus, filterPriority, filterAssignee, filterDateFrom, filterDateTo]);
+
+  const loadAdmins = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/support/tickets/admins`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setAdmins(data.admins || []);
+    } catch (error) {
+      console.error('Failed to load admins:', error);
+    }
+  };
 
   const loadTickets = async () => {
     try {
       const token = localStorage.getItem('token');
-      const url = filter 
-        ? `${process.env.NEXT_PUBLIC_API_URL}/api/admin/support/tickets?status=${filter}`
-        : `${process.env.NEXT_PUBLIC_API_URL}/api/admin/support/tickets`;
-      
-      const res = await fetch(url, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/support/tickets`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -27,6 +50,53 @@ export default function SupportTicketsPage() {
     } catch (error) {
       console.error('Failed to load tickets:', error);
     }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...tickets];
+
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(t => 
+        t.ticket_number?.toLowerCase().includes(search) ||
+        t.subject?.toLowerCase().includes(search) ||
+        t.tenant_id?.toLowerCase().includes(search)
+      );
+    }
+
+    if (filterStatus) {
+      filtered = filtered.filter(t => t.status === filterStatus);
+    }
+
+    if (filterPriority) {
+      filtered = filtered.filter(t => t.priority === filterPriority);
+    }
+
+    if (filterAssignee) {
+      if (filterAssignee === 'unassigned') {
+        filtered = filtered.filter(t => !t.assigned_to);
+      } else {
+        filtered = filtered.filter(t => t.assigned_to?.toString() === filterAssignee);
+      }
+    }
+
+    if (filterDateFrom) {
+      filtered = filtered.filter(t => new Date(t.created_at) >= new Date(filterDateFrom));
+    }
+    if (filterDateTo) {
+      filtered = filtered.filter(t => new Date(t.created_at) <= new Date(filterDateTo));
+    }
+
+    setFilteredTickets(filtered);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterStatus('');
+    setFilterPriority('');
+    setFilterAssignee('');
+    setFilterDateFrom('');
+    setFilterDateTo('');
   };
 
   const createTicket = async () => {
@@ -64,7 +134,10 @@ export default function SupportTicketsPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Support Tickets</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Support Tickets</h1>
+          <p className="text-gray-600 mt-1">{filteredTickets.length} tickets found</p>
+        </div>
         <button 
           onClick={() => setShowCreateModal(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -73,16 +146,80 @@ export default function SupportTicketsPage() {
         </button>
       </div>
 
-      <div className="flex gap-2">
-        {['', 'open', 'in_progress', 'resolved', 'closed'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`px-4 py-2 rounded ${filter === status ? 'bg-blue-600 text-white' : 'bg-white border'}`}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="grid grid-cols-6 gap-4 mb-4">
+          <div className="col-span-2">
+            <input
+              type="text"
+              placeholder="Search ticket #, subject, tenant..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border rounded"
+            />
+          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-3 py-2 border rounded"
           >
-            {status || 'All'}
+            <option value="">All Status</option>
+            <option value="new">New</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+          <select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="">All Priority</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+          <select
+            value={filterAssignee}
+            onChange={(e) => setFilterAssignee(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="">All Assignees</option>
+            <option value="unassigned">Unassigned</option>
+            {admins.map((admin) => (
+              <option key={admin.id} value={admin.id}>
+                {admin.email}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={clearFilters}
+            className="px-4 py-2 border rounded hover:bg-gray-50"
+          >
+            Clear
           </button>
-        ))}
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">From Date</label>
+            <input
+              type="date"
+              value={filterDateFrom}
+              onChange={(e) => setFilterDateFrom(e.target.value)}
+              className="w-full px-3 py-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">To Date</label>
+            <input
+              type="date"
+              value={filterDateTo}
+              onChange={(e) => setFilterDateTo(e.target.value)}
+              className="w-full px-3 py-2 border rounded"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -99,8 +236,15 @@ export default function SupportTicketsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {tickets.map((ticket) => (
-              <tr key={ticket.id} className="hover:bg-gray-50">
+            {filteredTickets.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                  No tickets found
+                </td>
+              </tr>
+            ) : (
+              filteredTickets.map((ticket) => (
+              <tr key={ticket.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => router.push(`/support-tickets/${ticket.id}`)}>
                 <td className="px-6 py-4 text-sm font-medium">{ticket.ticket_number}</td>
                 <td className="px-6 py-4 text-sm">{ticket.subject}</td>
                 <td className="px-6 py-4 text-sm">{ticket.tenant_id}</td>

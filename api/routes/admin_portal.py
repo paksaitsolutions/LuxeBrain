@@ -55,10 +55,11 @@ async def get_revenue_by_plan(admin=Depends(verify_admin)):
     plan_prices = {"free": 0, "starter": 49, "growth": 149, "enterprise": 499}
     by_plan = {}
     
-    # TODO: Migrate to database - for tenant_id, tenant in TENANTS_DB.items():
-        if tenant.get("status") == "active":
-            plan = tenant.get("plan", "starter")
-            by_plan[plan] = by_plan.get(plan, 0) + plan_prices.get(plan, 0)
+    # TODO: Migrate to database
+    # for tenant_id, tenant in TENANTS_DB.items():
+    #     if tenant.get("status") == "active":
+    #         plan = tenant.get("plan", "starter")
+    #         by_plan[plan] = by_plan.get(plan, 0) + plan_prices.get(plan, 0)
     
     return {"by_plan": by_plan}
 
@@ -86,17 +87,18 @@ async def get_usage_by_tenant(admin=Depends(verify_admin), db: Session = Depends
     from api.utils.usage_tracker import UsageTracker
     
     usage_data = []
-    # TODO: Migrate to database - for tenant_id in TENANTS_DB.keys():
-        usage = UsageTracker.get_usage(tenant_id)
-        daily = UsageTracker.get_daily_usage(tenant_id)
-        
-        usage_data.append({
-            "tenant_id": tenant_id,
-            "api_calls_today": daily.get("api_calls", 0),
-            "ml_inferences_today": daily.get("ml_inferences", 0),
-            "storage_mb": usage.get("storage_bytes", 0) / (1024 * 1024),
-            "total_api_calls": usage.get("api_calls", 0)
-        })
+    # TODO: Migrate to database
+    # for tenant_id in TENANTS_DB.keys():
+    #     usage = UsageTracker.get_usage(tenant_id)
+    #     daily = UsageTracker.get_daily_usage(tenant_id)
+    #     
+    #     usage_data.append({
+    #         "tenant_id": tenant_id,
+    #         "api_calls_today": daily.get("api_calls", 0),
+    #         "ml_inferences_today": daily.get("ml_inferences", 0),
+    #         "storage_mb": usage.get("storage_bytes", 0) / (1024 * 1024),
+    #         "total_api_calls": usage.get("api_calls", 0)
+    #     })
     
     return {"usage": sorted(usage_data, key=lambda x: x["api_calls_today"], reverse=True)}
 
@@ -150,7 +152,9 @@ class ManualInvoiceRequest(BaseModel):
 @router.post("/billing/manual-invoice")
 async def create_manual_invoice(req: ManualInvoiceRequest, admin=Depends(verify_admin), db: Session = Depends(get_db)):
     """Create manual invoice"""
-    # TODO: Migrate to database - tenant = TENANTS_DB.get(req.tenant_id)
+    # TODO: Migrate to database
+    # tenant = TENANTS_DB.get(req.tenant_id)
+    tenant = db.query(Tenant).filter(Tenant.id == req.tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
     

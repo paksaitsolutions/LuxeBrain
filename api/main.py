@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import time
 
-from api.routes import recommendations, forecasting, segmentation, pricing, visual_search, webhooks, auth, pool_monitoring, usage_monitoring, plan_limits, feature_gates, stripe_webhooks, billing, admin_billing, metering, admin_features, logs, model_versions, anomalies, db_monitoring, batch, undo, bot_detection, rate_limit, api_logs, slow_queries, deprecated_apis, analytics, security_logs, admin_tenants, admin_portal, rbac, demo, admin_plans, admin_coupons, admin_webhooks, admin_email_templates, admin_stats, admin_maintenance, admin_settings, admin_support_usage
+from api.routes import recommendations, forecasting, segmentation, pricing, visual_search, webhooks, auth, pool_monitoring, usage_monitoring, plan_limits, feature_gates, stripe_webhooks, billing, admin_billing, metering, admin_features, logs, model_versions, anomalies, db_monitoring, batch, undo, bot_detection, rate_limit, api_logs, slow_queries, deprecated_apis, analytics, security_logs, admin_tenants, admin_portal, rbac, demo, admin_plans, admin_coupons, admin_webhooks, admin_email_templates, admin_stats, admin_maintenance, admin_settings, admin_support_usage, admin_support_tickets
 from api.middleware.rate_limiter import RateLimitMiddleware
 from api.middleware.auth import AuthMiddleware
 from api.middleware.validation import InputValidationMiddleware
@@ -201,6 +201,7 @@ app.include_router(admin_stats.router)
 app.include_router(admin_maintenance.router, prefix="/api/admin/maintenance", tags=["Maintenance"])
 app.include_router(admin_settings.router, prefix="/api/admin/settings", tags=["Settings"])
 app.include_router(admin_support_usage.router, prefix="/api/admin", tags=["Support & Usage"])
+app.include_router(admin_support_tickets.router)
 app.include_router(auth.router)
 app.include_router(batch.router)
 app.include_router(undo.router)

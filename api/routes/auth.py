@@ -18,7 +18,7 @@ from config.settings import settings
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+SECRET_KEY = settings.JWT_SECRET_KEY
 ALGORITHM = "HS256"
 LOCKOUT_THRESHOLD = 5
 LOCKOUT_DURATION = 15  # minutes

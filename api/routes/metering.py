@@ -51,22 +51,23 @@ async def create_overage_invoice(request: Request):
 @router.get("/admin/overage-summary")
 async def get_all_overages(admin=Depends(verify_admin)):
     """Get overage summary for all tenants"""
-        
+    
     summary = []
     total_overage = 0
     
-    # TODO: Migrate to database - for tenant_id, tenant_data in TENANTS_DB.items():
-        plan = tenant_data.get("plan", "basic")
-        overage = UsageMeter.calculate_overage(tenant_id, plan)
-        
-        if overage["total_overage_charge"] > 0:
-            summary.append({
-                "tenant_id": tenant_id,
-                "name": tenant_data.get("name"),
-                "plan": plan,
-                "overage": overage
-            })
-            total_overage += overage["total_overage_charge"]
+    # TODO: Migrate to database
+    # for tenant_id, tenant_data in TENANTS_DB.items():
+    #     plan = tenant_data.get("plan", "basic")
+    #     overage = UsageMeter.calculate_overage(tenant_id, plan)
+    #     
+    #     if overage["total_overage_charge"] > 0:
+    #         summary.append({
+    #             "tenant_id": tenant_id,
+    #             "name": tenant_data.get("name"),
+    #             "plan": plan,
+    #             "overage": overage
+    #         })
+    #         total_overage += overage["total_overage_charge"]
     
     return {
         "tenants": summary,

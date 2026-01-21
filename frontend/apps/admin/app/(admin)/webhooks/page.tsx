@@ -9,6 +9,8 @@ export default function WebhooksPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newWebhook, setNewWebhook] = useState({ url: '', events: [] as string[] });
+  const [testResult, setTestResult] = useState<any>(null);
+  const [testing, setTesting] = useState<number | null>(null);
 
   const availableEvents = [
     'tenant.created', 'tenant.updated', 'tenant.deleted',
@@ -94,6 +96,32 @@ export default function WebhooksPage() {
     }
   };
 
+  const testWebhook = async (webhookId: number) => {
+    setTesting(webhookId);
+    setTestResult(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/webhooks/${webhookId}/test`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setTestResult(data);
+      
+      if (data.success) {
+        toast.success(`Test successful! Status: ${data.status_code}`);
+      } else {
+        toast.error(`Test failed: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to test webhook:', error);
+      toast.error('Failed to test webhook');
+    } finally {
+      setTesting(null);
+    }
+  };
+
   if (loading) return (
     <div className="flex justify-center items-center p-12">
       <Spinner size="lg" />
@@ -131,8 +159,19 @@ export default function WebhooksPage() {
                 <div className="text-sm text-gray-500">Last triggered: {webhook.last_triggered || 'Never'}</div>
               </div>
               <div className="flex gap-2">
-                <button className="px-3 py-1 border rounded hover:bg-gray-50">Edit</button>
-                <button className="px-3 py-1 border rounded hover:bg-gray-50">Test</button>
+                <button 
+                  onClick={() => window.location.href = `/webhooks/${webhook.id}`}
+                  className="px-3 py-1 border rounded hover:bg-gray-50"
+                >
+                  Logs
+                </button>
+                <button 
+                  onClick={() => testWebhook(webhook.id)}
+                  disabled={testing === webhook.id}
+                  className="px-3 py-1 border rounded hover:bg-gray-50 disabled:bg-gray-100"
+                >
+                  {testing === webhook.id ? 'Testing...' : 'Test'}
+                </button>
                 <button 
                   onClick={() => deleteWebhook(webhook.id)}
                   className="px-3 py-1 border border-red-600 text-red-600 rounded hover:bg-red-50"
@@ -144,6 +183,63 @@ export default function WebhooksPage() {
           </div>
         ))}
       </div>
+
+      {/* Test Result Modal */}
+      {testResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[600px]">
+            <h2 className="text-xl font-bold mb-4">Webhook Test Result</h2>
+            
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="font-medium">Status:</span>
+                <span className={`px-3 py-1 rounded-full text-sm ${
+                  testResult.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {testResult.success ? 'Success' : 'Failed'}
+                </span>
+              </div>
+              
+              {testResult.status_code && (
+                <div>
+                  <span className="font-medium">Status Code:</span>
+                  <span className="ml-2">{testResult.status_code}</span>
+                </div>
+              )}
+              
+              <div>
+                <span className="font-medium">Duration:</span>
+                <span className="ml-2">{testResult.duration_ms}ms</span>
+              </div>
+              
+              {testResult.response_body && (
+                <div>
+                  <span className="font-medium block mb-2">Response Body:</span>
+                  <pre className="bg-gray-100 p-3 rounded text-sm overflow-auto max-h-60">
+                    {testResult.response_body}
+                  </pre>
+                </div>
+              )}
+              
+              {testResult.error && (
+                <div>
+                  <span className="font-medium block mb-2">Error:</span>
+                  <div className="bg-red-50 text-red-800 p-3 rounded text-sm">
+                    {testResult.error}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <button 
+              onClick={() => setTestResult(null)}
+              className="w-full mt-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 bg-blue-50 p-6 rounded-lg">
         <h3 className="font-bold mb-2">Available Events</h3>

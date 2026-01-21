@@ -4,11 +4,26 @@ import { useEffect, useState } from 'react';
 
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<any[]>([]);
+  const [filteredTenants, setFilteredTenants] = useState<any[]>([]);
   const [pendingTenants, setPendingTenants] = useState<any[]>([]);
   const [demoRequests, setDemoRequests] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectTenantId, setRejectTenantId] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
+  const [selectedTenants, setSelectedTenants] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState('');
+  const [bulkPlan, setBulkPlan] = useState('starter');
+  
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterPlan, setFilterPlan] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+  
   const [newTenant, setNewTenant] = useState({ 
     email: '', name: '', plan: 'starter',
     company_name: '', company_website: '', company_phone: '', industry: '',
@@ -53,12 +68,21 @@ export default function TenantsPage() {
   const loadTenants = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/tenants`, {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (filterPlan) params.append('plan', filterPlan);
+      if (filterStatus) params.append('status', filterStatus);
+      if (filterDateFrom) params.append('date_from', filterDateFrom);
+      if (filterDateTo) params.append('date_to', filterDateTo);
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/tenants?${params}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      setTenants(data.tenants?.filter((t: any) => t.status === 'active') || []);
-      setPendingTenants(data.tenants?.filter((t: any) => t.status === 'pending') || []);
+      const allTenants = data.tenants || [];
+      setTenants(allTenants.filter((t: any) => t.status === 'active'));
+      setFilteredTenants(allTenants.filter((t: any) => t.status === 'active'));
+      setPendingTenants(allTenants.filter((t: any) => t.status === 'pending'));
     } catch (error) {
       console.error('Failed to load tenants:', error);
     } finally {
@@ -69,7 +93,7 @@ export default function TenantsPage() {
   const createTenant = async () => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/tenants`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/tenants`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -77,6 +101,13 @@ export default function TenantsPage() {
         },
         body: JSON.stringify(newTenant)
       });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || 'Failed to create tenant');
+      }
+      
+      const data = await res.json();
       setShowCreateModal(false);
       setNewTenant({ 
         email: '', name: '', plan: 'starter',
@@ -87,7 +118,7 @@ export default function TenantsPage() {
         woocommerce_url: '', woocommerce_key: '', woocommerce_secret: ''
       });
       loadTenants();
-      alert('Tenant created successfully!');
+      alert(`Tenant created! Temp password: ${data.temp_password}`);
     } catch (error: any) {
       console.error('Failed to create tenant:', error);
       alert(error.message || 'Failed to create tenant');
@@ -121,6 +152,81 @@ export default function TenantsPage() {
     }
   };
 
+  const rejectTenant = async () => {
+    if (!rejectReason.trim()) {
+      alert('Please provide a rejection reason');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/tenants/${rejectTenantId}/reject`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason: rejectReason })
+      });
+      setShowRejectModal(false);
+      setRejectReason('');
+      setRejectTenantId('');
+      loadTenants();
+      alert('Tenant rejected');
+    } catch (error) {
+      console.error('Failed to reject tenant:', error);
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (selectedTenants.length === 0) {
+      alert('Please select tenants');
+      return;
+    }
+    if (!bulkAction) {
+      alert('Please select an action');
+      return;
+    }
+    if (!confirm(`Apply ${bulkAction} to ${selectedTenants.length} tenant(s)?`)) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/tenants/bulk-action`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          tenant_ids: selectedTenants,
+          action: bulkAction,
+          plan: bulkAction === 'change_plan' ? bulkPlan : undefined
+        })
+      });
+      setSelectedTenants([]);
+      setBulkAction('');
+      loadTenants();
+      alert('Bulk action completed');
+    } catch (error) {
+      console.error('Failed to perform bulk action:', error);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedTenants.length === filteredTenants.length) {
+      setSelectedTenants([]);
+    } else {
+      setSelectedTenants(filteredTenants.map(t => t.tenant_id));
+    }
+  };
+
+  const toggleSelect = (tenantId: string) => {
+    setSelectedTenants(prev => 
+      prev.includes(tenantId) 
+        ? prev.filter(id => id !== tenantId)
+        : [...prev, tenantId]
+    );
+  };
+
   if (loading) return <div className="p-6">Loading...</div>;
 
   return (
@@ -137,6 +243,92 @@ export default function TenantsPage() {
           + Create Tenant
         </button>
       </div>
+
+      {/* Search & Filters */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="grid grid-cols-5 gap-4">
+          <div className="col-span-2">
+            <input
+              type="text"
+              placeholder="Search by name, email, ID, company..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border rounded"
+            />
+          </div>
+          <select
+            value={filterPlan}
+            onChange={(e) => setFilterPlan(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="">All Plans</option>
+            <option value="free">Free</option>
+            <option value="starter">Starter</option>
+            <option value="growth">Growth</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="pending">Pending</option>
+          </select>
+          <button
+            onClick={loadTenants}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Apply Filters
+          </button>
+        </div>
+      </div>
+
+      {/* Bulk Actions */}
+      {selectedTenants.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center gap-4">
+            <span className="font-medium">{selectedTenants.length} tenant(s) selected</span>
+            <select
+              value={bulkAction}
+              onChange={(e) => setBulkAction(e.target.value)}
+              className="px-3 py-2 border rounded"
+            >
+              <option value="">Select Action</option>
+              <option value="suspend">Suspend</option>
+              <option value="activate">Activate</option>
+              <option value="change_plan">Change Plan</option>
+            </select>
+            {bulkAction === 'change_plan' && (
+              <select
+                value={bulkPlan}
+                onChange={(e) => setBulkPlan(e.target.value)}
+                className="px-3 py-2 border rounded"
+              >
+                <option value="free">Free</option>
+                <option value="starter">Starter</option>
+                <option value="growth">Growth</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+            )}
+            <button
+              onClick={handleBulkAction}
+              disabled={!bulkAction}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300"
+            >
+              Apply
+            </button>
+            <button
+              onClick={() => setSelectedTenants([])} 
+              className="px-4 py-2 border rounded hover:bg-gray-50"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Demo Requests */}
       {demoRequests.length > 0 && (
@@ -193,7 +385,13 @@ export default function TenantsPage() {
                   >
                     Approve
                   </button>
-                  <button className="px-4 py-2 border border-red-600 text-red-600 rounded hover:bg-red-50">
+                  <button 
+                    onClick={() => {
+                      setRejectTenantId(tenant.tenant_id);
+                      setShowRejectModal(true);
+                    }}
+                    className="px-4 py-2 border border-red-600 text-red-600 rounded hover:bg-red-50"
+                  >
                     Reject
                   </button>
                 </div>
@@ -211,17 +409,34 @@ export default function TenantsPage() {
         <table className="min-w-full">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-6 py-3 text-left">
+                <input
+                  type="checkbox"
+                  checked={selectedTenants.length === filteredTenants.length && filteredTenants.length > 0}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4"
+                />
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tenant</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {tenants.map((tenant) => (
+            {filteredTenants.map((tenant) => (
               <tr key={tenant.tenant_id} className="hover:bg-gray-50">
+                <td className="px-6 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedTenants.includes(tenant.tenant_id)}
+                    onChange={() => toggleSelect(tenant.tenant_id)}
+                    className="w-4 h-4"
+                  />
+                </td>
                 <td className="px-6 py-4">
                   <div className="font-medium">{tenant.name || 'N/A'}</div>
                   <div className="text-sm text-gray-500">{tenant.tenant_id}</div>
@@ -232,6 +447,9 @@ export default function TenantsPage() {
                     {tenant.plan || 'starter'}
                   </span>
                 </td>
+                <td className="px-6 py-4 font-medium">
+                  ${(tenant.revenue || 0).toFixed(2)}
+                </td>
                 <td className="px-6 py-4">
                   <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
                     {tenant.status}
@@ -241,8 +459,18 @@ export default function TenantsPage() {
                   {new Date(tenant.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4">
-                  <button className="text-blue-600 hover:underline mr-3">View</button>
-                  <button className="text-blue-600 hover:underline mr-3">Edit</button>
+                  <button 
+                    onClick={() => window.location.href = `/tenants/${tenant.tenant_id}`}
+                    className="text-blue-600 hover:underline mr-3"
+                  >
+                    View
+                  </button>
+                  <button 
+                    onClick={() => window.location.href = `/tenants/${tenant.tenant_id}`}
+                    className="text-blue-600 hover:underline mr-3"
+                  >
+                    Edit
+                  </button>
                   <button 
                     onClick={() => suspendTenant(tenant.tenant_id)}
                     className="text-red-600 hover:underline"
@@ -574,6 +802,40 @@ export default function TenantsPage() {
                     tax_id: '', vat_number: '',
                     woocommerce_url: '', woocommerce_key: '', woocommerce_secret: ''
                   });
+                }}
+                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Reject Tenant</h2>
+            <p className="text-gray-600 mb-4">Please provide a reason for rejecting this tenant application:</p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full px-3 py-2 border rounded h-32 mb-4"
+              placeholder="Enter rejection reason..."
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={rejectTenant}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Reject Tenant
+              </button>
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason('');
+                  setRejectTenantId('');
                 }}
                 className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
               >

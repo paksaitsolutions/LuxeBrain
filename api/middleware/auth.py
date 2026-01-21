@@ -18,6 +18,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
     ]
     
     async def dispatch(self, request: Request, call_next):
+        # Skip auth for OPTIONS requests (CORS preflight)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+        
         # Skip auth for excluded paths
         if request.url.path in self.EXCLUDED_PATHS:
             return await call_next(request)
@@ -31,38 +35,38 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         
         # Admin endpoints require JWT token
-        try:
-            auth_header = request.headers.get("Authorization")
-            if not auth_header or not auth_header.startswith("Bearer "):
-                # Try to get token from cookie
-                token = request.cookies.get("token")
-                if not token:
-                    from fastapi.responses import JSONResponse
-                    return JSONResponse(
-                        status_code=401,
-                        content={"detail": "Missing or invalid token"}
-                    )
-            else:
-                token = auth_header.split(" ")[1]
-            
-            payload = jwt.decode(
-                token,
-                settings.JWT_SECRET_KEY,
-                algorithms=[settings.JWT_ALGORITHM]
-            )
-            request.state.user = payload
-        except JWTError:
-            from fastapi.responses import JSONResponse
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Invalid token"}
-            )
-        except Exception as e:
-            from fastapi.responses import JSONResponse
-            return JSONResponse(
-                status_code=500,
-                content={"detail": f"Authentication error: {str(e)}"}
-            )
+        if request.url.path.startswith("/api/admin/"):
+            try:
+                auth_header = request.headers.get("Authorization")
+                if not auth_header or not auth_header.startswith("Bearer "):
+                    token = request.cookies.get("token")
+                    if not token:
+                        from fastapi.responses import JSONResponse
+                        return JSONResponse(
+                            status_code=401,
+                            content={"detail": "Missing or invalid token"}
+                        )
+                else:
+                    token = auth_header.split(" ")[1]
+                
+                payload = jwt.decode(
+                    token,
+                    settings.JWT_SECRET_KEY,
+                    algorithms=[settings.JWT_ALGORITHM]
+                )
+                request.state.user = payload
+            except JWTError:
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid token"}
+                )
+            except Exception as e:
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=500,
+                    content={"detail": f"Authentication error: {str(e)}"}
+                )
         
         return await call_next(request)
 

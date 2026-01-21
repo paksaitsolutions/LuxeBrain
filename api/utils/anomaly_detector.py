@@ -215,5 +215,8 @@ class AnomalyDetector:
     
     def get_anomaly_count(self) -> int:
         """Get total count of unresolved anomalies"""
-        items = self.redis_client.lrange("admin:alerts", 0, -1)
-        return len(items)
+        try:
+            items = self.redis_client.lrange("admin:alerts", 0, -1)
+            return len(items)
+        except Exception:
+            return 0

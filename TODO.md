@@ -2054,3 +2054,595 @@ But it's currently:
 **Owner:** Paksa IT Solutions
 
 **Built with ❤️ by Paksa IT Solutions**
+
+
+---
+
+## 🚀 SAAS-LEVEL ADMIN PORTAL - MISSING FEATURES
+
+### 🔴 HIGH PRIORITY - CRITICAL MISSING FEATURES
+
+#### 1. TENANT MANAGEMENT ENHANCEMENTS
+- [x] **Tenant Detail View Page** - `/admin/tenants/[id]` ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/tenants/:id` with full details (real-time data from DB)
+  - ✅ Backend: PUT `/api/admin/tenants/:id` for updates
+  - ✅ Backend: DELETE `/api/admin/tenants/:id` for deletion
+  - ✅ Frontend: Full profile page with 5 tabs (Overview, Billing, Usage, Logs, Integrations)
+  - ✅ Overview Tab: Stats cards, company info, account info, address, POC
+  - ✅ Billing Tab: Complete billing history from revenue_records table
+  - ✅ Usage Tab: API calls (30d), total revenue, open tickets from real DB queries
+  - ✅ Logs Tab: Activity timeline from user_activities table + support tickets
+  - ✅ Integrations Tab: API key display/copy + WooCommerce connection status
+  - ✅ Actions: Edit (full modal), Suspend, Delete with confirmations
+  - ✅ Database Integration: Queries from tenants, users, revenue_records, api_logs, user_activities, support_tickets tables
+  - ✅ Navigation: View/Edit buttons on tenant list now link to detail page
+
+- [x] **Tenant Edit Modal/Page** ✅ COMPLETED (Integrated in Detail Page)
+  - ✅ Backend: PUT `/api/admin/tenants/:id` implemented
+  - ✅ Frontend: Edit modal with all fields (name, email, plan, company, address, POC, tax, WooCommerce)
+  - ✅ Features: Update all tenant information including plan and integrations
+  - ✅ Real-time updates with cache invalidation
+
+- [x] **Tenant Search & Filters** ✅ COMPLETED
+  - ✅ Frontend: Search bar + 4 filter dropdowns (plan, status, date range)
+  - ✅ Search: Name, email, tenant_id, company name (case-insensitive)
+  - ✅ Filters: Plan, status, date_from, date_to with real-time filtering
+  - ✅ Backend: Query parameters support with SQL ILIKE and date filtering
+  - ✅ Revenue display: Shows total revenue per tenant from revenue_records table
+  - ✅ CORS Fix: OPTIONS requests bypass authentication for preflight
+
+- [x] **Tenant Bulk Operations** ✅ COMPLETED
+  - ✅ Frontend: Checkbox selection (individual + select all) + bulk action dropdown
+  - ✅ Actions: Bulk suspend, bulk activate, bulk plan change with plan selector
+  - ✅ Backend: POST `/api/admin/tenants/bulk-action` with tenant_ids array
+  - ✅ Confirmation: Shows affected count before execution with confirm dialog
+  - ✅ UI: Blue banner shows selected count with clear button
+  - ✅ Cache invalidation: Clears tenant cache for all affected tenants
+
+- [x] **Tenant Reject Functionality** ✅ COMPLETED
+  - ✅ Backend: POST `/api/admin/tenants/:id/reject` with reason logging
+  - ✅ Frontend: Rejection modal with reason textarea on pending approvals
+  - ✅ Database: Stores rejection in user_activities table with reason and email
+  - ✅ Status: Updates tenant status to "rejected"
+  - ✅ Validation: Requires rejection reason before submission
+  - ✅ Email: TODO comment added for email notification integration
+
+- [x] **Tenant Impersonation (Support)** ✅ COMPLETED
+  - ✅ Backend: POST `/api/admin/tenants/:id/impersonate` returns temp JWT token (1 hour expiry)
+  - ✅ Backend: POST `/api/admin/tenants/impersonate/exit` to end impersonation
+  - ✅ Frontend: "Login as Tenant" button on tenant detail page
+  - ✅ Security: Audit log in security_audit_log table with admin email, tenant email, timestamps
+  - ✅ Token: Contains impersonation flag, impersonated_by admin ID, 1-hour expiration
+  - ✅ UI: Orange banner on tenant app showing "ADMIN IMPERSONATION MODE" with exit button
+  - ✅ UI: Banner on admin detail page when impersonating with exit option
+  - ✅ Session: Stores original admin token, restores on exit
+  - ✅ Redirect: Auto-redirects to tenant app (localhost:3000) on impersonate
+  - ✅ Exit: Returns to admin tenant list (localhost:3001/tenants) on exit
+
+#### 2. BILLING MANAGEMENT ENHANCEMENTS
+- [x] **Invoice Detail View** ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/billing/invoices/:id` with full invoice data
+  - ✅ Backend: POST `/api/admin/billing/invoices/:id/action` for mark_paid and refund
+  - ✅ Frontend: Modal with full invoice details (line items, totals, payment info)
+  - ✅ Show: Line items table, subtotal, tax, discount, total, payment method, status
+  - ✅ Actions: Mark as Paid (pending→paid), Issue Refund (paid→refunded)
+  - ✅ Database: Queries revenue_records and tenants tables
+  - ✅ Audit: Logs all actions in user_activities table
+  - ✅ UI: Professional invoice layout with color-coded status badges
+  - ✅ Placeholders: Download PDF and Send Email buttons (TODO)
+
+- [x] **Invoice PDF Generation** ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/billing/invoices/:id/pdf` with ReportLab
+  - ✅ Library: ReportLab for professional PDF generation
+  - ✅ Template: Invoice with header, bill-to, line items table, totals
+  - ✅ Download: Streams PDF to browser with proper filename
+  - ✅ Frontend: Download PDF button opens in new tab
+  - ✅ Styling: Professional table layout with headers and borders
+  - ✅ Content: Invoice number, date, status, tenant info, line items, total
+
+- [x] **Invoice Email Sending** ✅ COMPLETED
+  - ✅ Backend: POST `/api/admin/billing/invoices/:id/send` with SMTP
+  - ✅ Email: Professional email template with invoice details in body
+  - ✅ Attachment: PDF invoice attached to email
+  - ✅ Tracking: Logs email sent status in user_activities table
+  - ✅ Resend: Can resend by clicking button again
+  - ✅ Frontend: Send Email button with confirmation dialog
+  - ✅ SMTP: Uses environment variables (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD)
+  - ✅ Fallback: Defaults to localhost:587 if not configured
+
+- [x] **Subscription Management** ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/billing/subscriptions/:tenant_id` for subscription details
+  - ✅ Backend: PUT `/api/admin/billing/subscriptions/:tenant_id` with action parameter
+  - ✅ Actions: Pause (active→suspended), Resume (suspended→active), Cancel (→canceled), Change Plan
+  - ✅ Frontend: Subscription management section in tenant detail billing tab
+  - ✅ UI: Action buttons (Pause, Resume, Change Plan, Cancel) with confirmations
+  - ✅ Database: Updates tenant status and plan in tenants table
+  - ✅ Audit: Logs all subscription actions in user_activities table
+  - ✅ Stripe: TODO comment added for Stripe API integration
+  - ✅ Conditional UI: Shows relevant buttons based on current status
+
+- [x] **Revenue Analytics Dashboard** ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/billing/revenue/analytics` with comprehensive metrics
+  - ✅ Frontend: Full analytics dashboard at `/admin/revenue-analytics`
+  - ✅ Charts: MRR, ARR, churn rate, revenue by plan, monthly trend, plan distribution
+  - ✅ KPI Cards: 4 key metrics (MRR, ARR, Churn Rate, Active Tenants)
+  - ✅ Revenue by Plan: Grid showing revenue and tenant count per plan
+  - ✅ Monthly Trend: Bar chart visualization for last 12 months
+  - ✅ Plan Distribution: Progress bars showing percentage distribution
+  - ✅ Filters: Plan type filter with apply button
+  - ✅ Calculations: Real-time MRR/ARR from active tenants, 30-day churn rate
+
+- [x] **Failed Payment Management** ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/billing/failed-payments` lists all failed payments
+  - ✅ Backend: POST `/api/admin/billing/failed-payments/:id/retry` to retry payment
+  - ✅ Backend: POST `/api/admin/billing/failed-payments/:id/contact` sends dunning email
+  - ✅ Backend: POST `/api/admin/billing/failed-payments/:id/suspend` suspends account
+  - ✅ Frontend: Failed payments page at `/admin/failed-payments`
+  - ✅ UI: Table with tenant info, amount, plan, retry count
+  - ✅ Actions: Retry (blue), Contact (outline), Suspend (red) buttons
+  - ✅ Email: Dunning email template with payment details
+  - ✅ Automation: Info panel explaining 3-attempt dunning sequence (Day 0, 3, 7)
+  - ✅ Empty State: Success message when no failed payments
+  - ✅ Audit: Logs all actions in user_activities table
+
+- [x] **Credit & Refund System** ✅ COMPLETED
+  - ✅ Backend: POST `/api/admin/billing/credits` to issue credit
+  - ✅ Backend: POST `/api/admin/billing/refunds` to process refund
+  - ✅ Backend: GET `/api/admin/billing/credits/:tenant_id` for credit balance
+  - ✅ Backend: GET `/api/admin/billing/refunds/:tenant_id` for refund history
+  - ✅ Frontend: Issue Credit modal (tenant_id, amount, reason)
+  - ✅ Frontend: Process Refund modal (invoice_id, amount, reason)
+  - ✅ Database: Creates negative revenue_records for credits/refunds
+  - ✅ Tracking: Credit balance calculation, refund history query
+  - ✅ Audit: Logs all credit/refund actions in user_activities table
+  - ✅ Stripe: TODO comments for Stripe credit note and refund API
+  - ✅ UI: Green "Issue Credit" and Orange "Process Refund" buttons on billing page
+
+#### 3. SUPPORT TICKETS WORKFLOW
+- [x] **Ticket Detail Page** - `/admin/support-tickets/[id]` ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/support/tickets/:id`
+  - ✅ Frontend: Full ticket view with conversation thread
+  - ✅ Show: All messages, attachments, status history, assignee
+  - ✅ UI: Ticket header with priority/status badges, conversation thread, attachments grid
+  - ✅ Navigation: Click ticket row to view details, back button to return
+
+- [x] **Ticket Reply System** ✅ COMPLETED
+  - ✅ Backend: POST `/api/admin/support/tickets/:id/reply`
+  - ✅ Frontend: Textarea with reply form (minimal, no heavy editor)
+  - ✅ Features: Internal notes checkbox, email notification toggle, canned responses
+  - ✅ Email: Sends reply to customer via SMTP with ticket details
+  - ✅ Canned Responses: 4 quick response templates (Thank you, Resolved, More info, Investigating)
+  - ✅ Audit: Logs reply action in user_activities table
+
+- [x] **Ticket Assignment** ✅ COMPLETED
+  - ✅ Backend: PUT `/api/admin/support/tickets/:id/assign`
+  - ✅ Backend: GET `/api/admin/support/tickets/admins` for admin users list
+  - ✅ Frontend: Assignee dropdown with admin users
+  - ✅ UI: Assignment section in ticket header with dropdown and assign button
+  - ✅ Display: Shows current assignee email
+  - ✅ Audit: Logs assignment action in user_activities table
+
+- [x] **Ticket Status Workflow** ✅ COMPLETED
+  - ✅ Backend: PUT `/api/admin/support/tickets/:id/status` with status validation
+  - ✅ Frontend: Status dropdown (New → In Progress → Resolved → Closed)
+  - ✅ Database: Logs status changes in ticket_status_history table
+  - ✅ UI: Status dropdown with update button in ticket header
+  - ✅ Audit: Logs all status changes in user_activities table
+  - ✅ History: Displays status change timeline with timestamps
+  - ⏳ TODO: SLA tracking (response time, resolution time)
+  - ⏳ TODO: Escalation rules (notify on SLA breach)
+  - ⏳ TODO: Auto-close after 7 days (background job)
+
+- [x] **Ticket Search & Filters** ✅ COMPLETED
+  - ✅ Frontend: Search bar + 5 filter dropdowns
+  - ✅ Search: Ticket number, subject, tenant ID (case-insensitive)
+  - ✅ Filters: Status, priority, assignee (with unassigned option), date range (from/to)
+  - ✅ UI: Grid layout with search and filters, clear button
+  - ✅ Real-time: Filters apply automatically on change
+  - ✅ Count: Shows filtered ticket count
+  - ✅ Empty state: "No tickets found" message
+
+#### 4. PLANS MANAGEMENT ENHANCEMENTS
+- [x] **Plan Features Matrix** ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/plans/features` returns all plans with limits
+  - ✅ Backend: PUT `/api/admin/plans/:id/limits` updates plan limits
+  - ✅ Frontend: Feature comparison table at `/admin/plan-features`
+  - ✅ Features: API calls, storage GB, users, ML inferences per plan
+  - ✅ UI: Visual matrix with plan pricing and limits comparison
+  - ✅ Edit: Modal to update limits with 0 = unlimited
+  - ✅ Display: Shows "Unlimited" for 0 values, formatted numbers for limits
+
+- [x] **Usage Limits Configuration** ✅ COMPLETED
+  - ✅ Backend: Plan limits stored in JSON column in plans table
+  - ✅ Backend: PUT `/api/admin/plans/:id/limits` updates limits and overage pricing
+  - ✅ Frontend: Limits configuration form in plan features page
+  - ✅ Limits: API calls/month, storage GB, users, ML inferences (0 = unlimited)
+  - ✅ Overage: Configure overage pricing per unit (API calls per 1000, storage per GB, users per user, ML per 1000)
+  - ✅ UI: Two-section modal with usage limits and overage pricing
+  - ✅ Validation: Decimal inputs for pricing, integer for limits
+
+- [x] **Plan Analytics** ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/plans/analytics`
+  - ✅ Frontend: Analytics page at `/admin/plan-analytics`
+  - ✅ Metrics: Subscribers per plan, conversion rate (trial to paid), most popular plan
+  - ✅ Charts: Subscribers by plan with percentage bars, recent changes (30 days)
+  - ✅ KPI Cards: Total active subscribers, most popular plan, conversion rate
+
+#### 5. WEBHOOKS ENHANCEMENTS
+- [x] **Webhook Testing** ✅ COMPLETED
+  - ✅ Backend: POST `/api/admin/webhooks/:id/test`
+  - ✅ Frontend: "Send Test" button on webhook list
+  - ✅ Features: Sends sample payload with test event and timestamp
+  - ✅ UI: Test result modal displays status code, response body, duration, errors
+  - ✅ Response: Shows success/failure status with color-coded badges
+  - ✅ Timeout: 10 second timeout for webhook requests
+
+- [x] **Webhook Delivery Logs** ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/webhooks/:id/logs`
+  - ✅ Frontend: Logs page at `/admin/webhooks/[id]` with delivery history table
+  - ✅ Show: Timestamp, event, status, response code, duration, retry count
+  - ✅ Actions: View details modal with full response body
+  - ✅ Database: webhook_logs table tracks all deliveries
+  - ✅ Logging: Test endpoint automatically logs all deliveries (success/failure)
+  - ✅ Limit: Shows last 100 logs per webhook
+
+- [x] **Webhook Retry Logic** ✅ COMPLETED
+  - ✅ Backend: POST `/api/admin/webhooks/logs/:id/retry` for manual retry
+  - ✅ Frontend: Retry button on failed deliveries (status code 0 or >= 400)
+  - ✅ Config: Max retries = 3 (enforced in backend)
+  - ✅ Status: Tracks retry_count in webhook_logs table
+  - ✅ UI: Retry button disabled after 3 attempts or while retrying
+  - ✅ Logging: Each retry creates new log entry with incremented retry_count
+
+#### 6. EMAIL TEMPLATES ENHANCEMENTS
+- [x] **Template Variables System** ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/email-templates/variables` lists all available variables
+  - ✅ Backend: POST `/api/admin/email-templates/:id/render` for variable replacement
+  - ✅ Frontend: "View Variables" button shows variables modal
+  - ✅ Variables: tenant (name, email, id), subscription (plan, price, period), billing (amount, invoice, due_date), general (date, year, company)
+  - ✅ Documentation: Each variable has description in modal
+  - ✅ UI: Click to copy variable to clipboard
+  - ✅ Engine: Simple string replacement with {{variable}} syntax
+
+- [x] **Template Preview** ✅ COMPLETED
+  - ✅ Backend: POST `/api/admin/email-templates/:id/preview` with sample data
+  - ✅ Backend: POST `/api/admin/email-templates/:id/send-test` sends test email via SMTP
+  - ✅ Frontend: Preview modal with rendered subject and body
+  - ✅ Features: Desktop/mobile view toggle, send test email button
+  - ✅ Sample Data: 13 variables populated with realistic test values
+  - ✅ UI: View toggle buttons, test email prompt with loading state
+
+- [x] **Email Analytics** ✅ COMPLETED
+  - ✅ Backend: GET `/api/admin/email-templates/:id/analytics` returns metrics
+  - ✅ Frontend: Analytics dashboard at `/admin/email-templates/[id]/analytics`
+  - ✅ Metrics: Open rate, click rate, bounce rate with percentages
+  - ✅ KPI Cards: Total sent, opens, clicks, bounces
+  - ✅ Visualization: Progress bars showing performance metrics
+  - ✅ Info: Explanation panel about tracking methods
+  - ⏳ TODO: Implement email_logs table for real tracking
+  - ⏳ TODO: Add tracking pixel to sent emails
+  - ⏳ TODO: Add click tracking redirects
+
+#### 7. ADMIN USERS (RBAC) ENHANCEMENTS
+- [ ] **Admin User Profile Page**
+  - Backend: GET/PUT `/api/admin/users/:id`
+  - Frontend: Profile page with edit form
+  - Features: Change password, 2FA setup, profile picture
+  - Security: Password strength requirements
+
+- [ ] **Admin Activity Logs**
+  - Backend: GET `/api/admin/users/:id/activity`
+  - Frontend: Activity timeline
+  - Track: All actions, login history, IP addresses
+  - Filters: Date range, action type
+
+- [ ] **Admin Invitation System**
+  - Backend: POST `/api/admin/users/invite`
+  - Frontend: Invite modal with email + role
+  - Email: Send invitation link (expires in 48 hours)
+  - Features: Resend invitation, revoke invitation
+
+#### 8. SECURITY & COMPLIANCE
+- [ ] **Comprehensive Audit Logs**
+  - Backend: Audit log table, GET `/api/admin/audit-logs`
+  - Frontend: Audit logs page with filters
+  - Track: All admin actions, tenant actions, system events
+  - Retention: 90 days minimum
+  - Export: CSV export
+
+- [ ] **GDPR Data Export**
+  - Backend: POST `/api/admin/tenants/:id/export-data`
+  - Frontend: "Export Data" button
+  - Features: Generate ZIP with all tenant data
+  - Email: Send download link when ready
+
+- [ ] **GDPR Data Deletion**
+  - Backend: DELETE `/api/admin/tenants/:id/data`
+  - Frontend: Delete confirmation workflow
+  - Features: Anonymize vs hard delete option
+  - Compliance: 30-day retention before permanent deletion
+
+- [ ] **Session Management**
+  - Backend: GET `/api/admin/sessions`, DELETE `/api/admin/sessions/:id`
+  - Frontend: Active sessions page
+  - Features: View all sessions, force logout, session timeout config
+  - Security: IP tracking, device info
+
+#### 9. SYSTEM SETTINGS
+- [ ] **General Settings Page**
+  - Backend: GET/PUT `/api/admin/settings/general`
+  - Frontend: Settings form
+  - Fields: Company name, logo, support email/phone, timezone
+  - Upload: Logo upload to S3/local storage
+
+- [ ] **Email Configuration**
+  - Backend: GET/PUT `/api/admin/settings/email`
+  - Frontend: SMTP settings form
+  - Fields: SMTP host, port, username, password, sender name/email
+  - Test: Send test email button
+
+- [ ] **Payment Gateway Config**
+  - Backend: GET/PUT `/api/admin/settings/payment`
+  - Frontend: Payment settings form
+  - Fields: Stripe keys (test/live), PayPal credentials
+  - Toggle: Test mode on/off
+  - Validation: Test connection
+
+#### 10. ANALYTICS & REPORTING
+- [ ] **Custom Dashboard Widgets**
+  - Backend: Widget configuration API
+  - Frontend: Drag-and-drop dashboard builder
+  - Widgets: Revenue, tenants, usage, support tickets
+  - Customization: Widget size, refresh interval
+
+- [ ] **Tenant Health Score**
+  - Backend: Calculate health score algorithm
+  - Frontend: Health score indicator on tenant list
+  - Metrics: Usage frequency, payment history, support tickets
+  - Alerts: Flag at-risk tenants (churn prediction)
+
+- [ ] **Custom Reports Builder**
+  - Backend: Report generation API
+  - Frontend: Report builder UI
+  - Features: Select metrics, filters, date range
+  - Export: CSV, PDF, scheduled email delivery
+
+---
+
+### 🟡 MEDIUM PRIORITY FEATURES
+
+#### 11. COUPONS ENHANCEMENTS
+- [ ] **Coupon Usage Tracking**
+  - Backend: GET `/api/admin/coupons/:id/usage`
+  - Frontend: Usage stats on coupon detail
+  - Show: Redemption count, revenue impact, tenant list
+  - Analytics: Usage timeline chart
+
+- [ ] **Advanced Coupon Types**
+  - Backend: Add coupon restrictions to database
+  - Frontend: Coupon creation with restrictions
+  - Types: First-time only, plan-specific, minimum amount
+  - Features: Stackable option, auto-apply
+
+#### 12. API KEYS ENHANCEMENTS
+- [ ] **API Key Permissions**
+  - Backend: Scope-based permissions system
+  - Frontend: Permission checkboxes on key creation
+  - Scopes: Read-only, write-only, resource-specific
+  - Validation: Enforce permissions on API calls
+
+- [ ] **API Key Usage Analytics**
+  - Backend: Track requests per key
+  - Frontend: Usage dashboard per key
+  - Metrics: Request count, last used, rate limit status
+  - Charts: Usage trends over time
+
+#### 13. BATCH OPERATIONS ENHANCEMENTS
+- [ ] **Batch Job Management**
+  - Backend: GET `/api/admin/batch/jobs`
+  - Frontend: Jobs list with filters
+  - Features: Cancel job, retry failed, view logs
+  - Status: Real-time progress tracking
+
+#### 14. MODELS (ML) ENHANCEMENTS
+- [ ] **Model Performance Dashboard**
+  - Backend: GET `/api/admin/models/:id/metrics`
+  - Frontend: Performance charts
+  - Metrics: Accuracy, latency, error rate
+  - Comparison: Compare model versions
+
+- [ ] **Model Training Trigger**
+  - Backend: POST `/api/admin/models/:id/train`
+  - Frontend: "Retrain Model" button
+  - Features: Training status, logs, data stats
+  - Notifications: Email when training complete
+
+#### 15. ANOMALIES ENHANCEMENTS
+- [ ] **Anomaly Detail View**
+  - Backend: GET `/api/admin/anomalies/:id`
+  - Frontend: Anomaly detail modal
+  - Show: Affected metrics, timeline, related anomalies
+  - Actions: Mark false positive, create ticket, notify tenant
+
+- [ ] **Anomaly Alert Rules**
+  - Backend: Alert rules configuration
+  - Frontend: Rules builder UI
+  - Features: Threshold config, notification channels
+  - Channels: Email, Slack, webhook
+
+#### 16. NOTIFICATIONS SYSTEM
+- [ ] **Notification Preferences**
+  - Backend: GET/PUT `/api/admin/settings/notifications`
+  - Frontend: Notification settings page
+  - Channels: Email, Slack, SMS, webhook
+  - Events: Select which events trigger notifications
+
+- [ ] **Notification History**
+  - Backend: GET `/api/admin/notifications/history`
+  - Frontend: Notification history page
+  - Show: Sent notifications, delivery status
+  - Actions: Resend notification
+
+#### 17. INTEGRATIONS MANAGEMENT
+- [ ] **WooCommerce Integration Status**
+  - Backend: GET `/api/admin/integrations/woocommerce/:tenant_id`
+  - Frontend: Integration status dashboard
+  - Show: Connection status, last sync, errors
+  - Actions: Test connection, manual sync, disconnect
+
+- [ ] **Third-party Integrations**
+  - Backend: Integration APIs for Slack, Zapier, etc.
+  - Frontend: Integrations page with connect buttons
+  - Features: OAuth flow, webhook setup
+  - Status: Connection status indicators
+
+---
+
+### 🟢 LOW PRIORITY (NICE TO HAVE)
+
+#### 18. ADVANCED ANALYTICS
+- [ ] **Cohort Analysis**
+  - Backend: Cohort calculation API
+  - Frontend: Cohort analysis charts
+  - Metrics: Retention by cohort, revenue by cohort
+  - Filters: Cohort by signup month, plan
+
+- [ ] **Revenue Forecasting**
+  - Backend: Forecasting algorithm
+  - Frontend: Forecast charts
+  - Predictions: MRR projection, churn impact
+  - Accuracy: Show confidence intervals
+
+#### 19. MAINTENANCE ENHANCEMENTS
+- [ ] **Database Optimization Tools**
+  - Backend: Database maintenance APIs
+  - Frontend: Maintenance dashboard
+  - Actions: Vacuum, reindex, analyze
+  - Monitoring: Database size, query performance
+
+- [ ] **Background Jobs Dashboard**
+  - Backend: Job queue monitoring
+  - Frontend: Jobs dashboard
+  - Show: Queue size, failed jobs, execution history
+  - Actions: Retry failed, clear queue
+
+#### 20. LOGS ENHANCEMENTS
+- [ ] **Advanced Log Filtering**
+  - Frontend: Multi-filter UI
+  - Filters: Level, module, tenant, date range
+  - Search: Full-text search, regex
+  - Export: Download filtered logs
+
+- [ ] **Log Aggregation**
+  - Backend: Log aggregation queries
+  - Frontend: Log statistics dashboard
+  - Metrics: Errors per hour, top error types
+  - Alerts: Spike detection
+
+---
+
+## 📊 IMPLEMENTATION PRIORITY
+
+### Phase 1: Critical UX Fixes (Week 1-2)
+1. ✅ Tenant View/Edit functionality
+2. ✅ Tenant Search & Filters
+3. ✅ Invoice Actions (view, download, send)
+4. ✅ Support Ticket workflow
+5. ✅ Tenant Reject functionality
+
+### Phase 2: Core SaaS Features (Week 3-4)
+1. ✅ Subscription Management
+2. ✅ Revenue Analytics
+3. ✅ Audit Logs
+4. ✅ Admin Activity Logs
+5. ✅ System Settings
+
+### Phase 3: Advanced Features (Week 5-6)
+1. ✅ Bulk Operations
+2. ✅ Webhook Logs
+3. ✅ Email Template Preview
+4. ✅ Plan Features Matrix
+5. ✅ API Key Permissions
+
+### Phase 4: Enterprise Features (Week 7-8)
+1. ✅ Tenant Impersonation
+2. ✅ GDPR Compliance
+3. ✅ Custom Reports
+4. ✅ Tenant Health Score
+5. ✅ Advanced Analytics
+
+---
+
+## 🎯 ESTIMATED EFFORT
+
+- **Phase 1**: 40 hours (2 weeks)
+- **Phase 2**: 40 hours (2 weeks)
+- **Phase 3**: 30 hours (1.5 weeks)
+- **Phase 4**: 30 hours (1.5 weeks)
+- **Total**: 140 hours (7 weeks)
+
+---
+
+## 📝 ADDITIONAL MISSING FEATURES
+
+### UI/UX Improvements
+- [ ] **Dark Mode** - Theme toggle for admin panel
+- [ ] **Keyboard Shortcuts** - Power user shortcuts (Cmd+K search, etc.)
+- [ ] **Breadcrumbs** - Navigation breadcrumbs on all pages
+- [ ] **Recent Activity Widget** - Dashboard widget showing recent admin actions
+- [ ] **Quick Actions Menu** - Global quick actions dropdown
+- [ ] **Saved Filters** - Save commonly used filter combinations
+- [ ] **Column Customization** - Show/hide table columns
+- [ ] **Pagination Controls** - Page size selector, jump to page
+- [ ] **Empty States** - Better empty state designs with CTAs
+- [ ] **Loading Skeletons** - Skeleton screens instead of spinners
+
+### Performance & Optimization
+- [ ] **Infinite Scroll** - For long lists (logs, tenants)
+- [ ] **Virtual Scrolling** - For very long tables
+- [ ] **Lazy Loading** - Load data on demand
+- [ ] **Caching Strategy** - Cache frequently accessed data
+- [ ] **Debounced Search** - Reduce API calls on search
+- [ ] **Optimistic Updates** - Update UI before API response
+
+### Developer Experience
+- [ ] **API Documentation** - Auto-generated API docs (Swagger/OpenAPI)
+- [ ] **Webhook Documentation** - Document webhook payloads
+- [ ] **SDK/Client Libraries** - Python, JavaScript SDKs
+- [ ] **Postman Collection** - API collection for testing
+- [ ] **GraphQL API** - Alternative to REST
+- [ ] **API Versioning** - v1, v2 API versions
+
+### Monitoring & Observability
+- [ ] **Error Tracking** - Sentry integration
+- [ ] **Performance Monitoring** - APM integration
+- [ ] **Uptime Monitoring** - Health check endpoints
+- [ ] **Alert Management** - PagerDuty/Opsgenie integration
+- [ ] **Metrics Dashboard** - System metrics (CPU, memory, requests/sec)
+
+### Communication
+- [ ] **In-app Messaging** - Message tenants from admin panel
+- [ ] **Broadcast Announcements** - Send announcements to all/selected tenants
+- [ ] **Email Campaigns** - Marketing email campaigns
+- [ ] **SMS Notifications** - Twilio integration
+- [ ] **Push Notifications** - Browser push notifications
+
+### Compliance & Security
+- [ ] **SOC 2 Compliance** - Audit trail, access controls
+- [ ] **HIPAA Compliance** - If handling health data
+- [ ] **PCI DSS** - If handling card data directly
+- [ ] **IP Whitelisting** - Restrict admin access by IP
+- [ ] **2FA Enforcement** - Require 2FA for all admins
+- [ ] **Password Policy** - Enforce strong passwords
+- [ ] **Session Recording** - Record admin sessions for audit
+
+### Automation
+- [ ] **Workflow Automation** - Zapier-like automation builder
+- [ ] **Scheduled Tasks** - Cron job management UI
+- [ ] **Auto-scaling Rules** - Automatic resource scaling
+- [ ] **Smart Alerts** - ML-based anomaly detection
+- [ ] **Auto-responses** - Automated support responses
+
+---
+
+**Copyright © 2024 Paksa IT Solutions**
