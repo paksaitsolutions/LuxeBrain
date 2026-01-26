@@ -189,6 +189,184 @@ async def get_metrics_history(model_name: str, days: int = 7, admin=Depends(veri
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/{model_id}/metrics")
+async def get_model_metrics(model_id: str, admin=Depends(verify_admin)):
+    """Get performance metrics for specific model"""
+    from config.database import SessionLocal
+    from api.models.database_models import ModelMetrics, ModelVersion
+    from sqlalchemy import func
+    from datetime import datetime, timedelta
+    
+    try:
+        db = SessionLocal()
+        
+        # Get model version info
+        model = db.query(ModelVersion).filter(ModelVersion.id == int(model_id)).first()
+        if not model:
+            db.close()
+            raise HTTPException(status_code=404, detail="Model not found")
+        
+        # Get latest metrics
+        latest_metrics = db.query(
+            ModelMetrics.metric_name,
+            ModelMetrics.metric_value
+        ).filter(
+            ModelMetrics.model_name == model.model_name,
+            ModelMetrics.model_version == model.version
+        ).order_by(ModelMetrics.timestamp.desc()).limit(10).all()
+        
+        # Calculate averages
+        avg_metrics = db.query(
+            ModelMetrics.metric_name,
+            func.avg(ModelMetrics.metric_value).label('avg_value')
+        ).filter(
+            ModelMetrics.model_name == model.model_name,
+            ModelMetrics.model_version == model.version,
+            ModelMetrics.timestamp >= datetime.utcnow() - timedelta(days=7)
+        ).group_by(ModelMetrics.metric_name).all()
+        
+        # Get timeline (last 30 days)
+        timeline = db.query(
+            func.date(ModelMetrics.timestamp).label('date'),
+            ModelMetrics.metric_name,
+            func.avg(ModelMetrics.metric_value).label('value')
+        ).filter(
+            ModelMetrics.model_name == model.model_name,
+            ModelMetrics.model_version == model.version,
+            ModelMetrics.timestamp >= datetime.utcnow() - timedelta(days=30)
+        ).group_by(
+            func.date(ModelMetrics.timestamp),
+            ModelMetrics.metric_name
+        ).order_by(func.date(ModelMetrics.timestamp)).all()
+        
+        # Get all versions for comparison
+        versions = db.query(ModelVersion).filter(
+            ModelVersion.model_name == model.model_name
+        ).all()
+        
+        db.close()
+        
+        # Format response
+        metrics_dict = {m.metric_name: round(m.avg_value, 4) for m in avg_metrics}
+        
+        timeline_data = {}
+        for t in timeline:
+            date_str = str(t.date)
+            if date_str not in timeline_data:
+                timeline_data[date_str] = {}
+            timeline_data[date_str][t.metric_name] = round(t.value, 4)
+        
+        return {
+            "model": {
+                "id": model.id,
+                "name": model.model_name,
+                "version": model.version,
+                "is_active": model.is_active,
+                "created_at": model.created_at
+            },
+            "metrics": {
+                "accuracy": metrics_dict.get('accuracy', 0),
+                "latency": metrics_dict.get('latency', 0),
+                "error_rate": metrics_dict.get('error_rate', 0),
+                "precision": metrics_dict.get('precision', 0),
+                "recall": metrics_dict.get('recall', 0)
+            },
+            "timeline": [{"date": k, **v} for k, v in timeline_data.items()],
+            "versions": [{
+                "id": v.id,
+                "version": v.version,
+                "is_active": v.is_active,
+                "performance_score": v.performance_score
+            } for v in versions]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{model_id}/train")
+async def trigger_training(model_id: str, admin=Depends(verify_admin)):
+    """Trigger model retraining"""
+    from config.database import SessionLocal
+    from api.models.database_models import ModelVersion, BatchJob
+    import uuid
+    from datetime import datetime
+    
+    try:
+        db = SessionLocal()
+        
+        model = db.query(ModelVersion).filter(ModelVersion.id == int(model_id)).first()
+        if not model:
+            db.close()
+            raise HTTPException(status_code=404, detail="Model not found")
+        
+        # Create training job
+        job_id = f"train_{model.model_name}_{uuid.uuid4().hex[:8]}"
+        job = BatchJob(
+            job_id=job_id,
+            job_type="model_training",
+            status="pending",
+            logs=f"Training initiated for {model.model_name} v{model.version}",
+            created_by=admin.get('user_id')
+        )
+        db.add(job)
+        db.commit()
+        
+        db.close()
+        
+        return {
+            "message": "Training job created",
+            "job_id": job_id,
+            "model": model.model_name,
+            "status": "pending"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{model_id}/training-status")
+async def get_training_status(model_id: str, admin=Depends(verify_admin)):
+    """Get training status for model"""
+    from config.database import SessionLocal
+    from api.models.database_models import ModelVersion, BatchJob
+    from sqlalchemy import desc
+    
+    try:
+        db = SessionLocal()
+        
+        model = db.query(ModelVersion).filter(ModelVersion.id == int(model_id)).first()
+        if not model:
+            db.close()
+            raise HTTPException(status_code=404, detail="Model not found")
+        
+        # Get latest training job
+        job = db.query(BatchJob).filter(
+            BatchJob.job_type == "model_training",
+            BatchJob.job_id.like(f"train_{model.model_name}%")
+        ).order_by(desc(BatchJob.created_at)).first()
+        
+        if not job:
+            db.close()
+            return {"has_training": False}
+        
+        result = {
+            "has_training": True,
+            "job_id": job.job_id,
+            "status": job.status,
+            "progress": job.progress,
+            "total": job.total,
+            "logs": job.logs,
+            "error_message": job.error_message,
+            "created_at": job.created_at,
+            "started_at": job.started_at,
+            "completed_at": job.completed_at
+        }
+        
+        db.close()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/request-isolation")
 async def request_isolation(tenant_id: str, model_name: str = "recommendation"):
     """Request isolated model for tenant"""

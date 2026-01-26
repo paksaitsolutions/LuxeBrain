@@ -12,8 +12,9 @@ import os
 import httpx
 from sqlalchemy.orm import Session
 from config.database import get_db
-from api.models.database_models import User, PasswordHistory, LoginAttempt, SecurityAuditLog
+from api.models.database_models import User, PasswordHistory, LoginAttempt, SecurityAuditLog, Session as SessionModel, UserActivity
 from config.settings import settings
+import hashlib
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
@@ -107,11 +108,13 @@ async def login(request: LoginRequest, req: Request, db: Session = Depends(get_d
     # Reset failed attempts on successful login
     user.failed_login_attempts = 0
     user.locked_until = None
+    user.last_login_at = datetime.utcnow()
+    user.last_login_ip = ip
     attempt.success = True
     db.commit()
     db.add(attempt)
-    db.commit()
     
+    # Create session
     token_data = {
         "sub": user.email,
         "user_id": str(user.id),
@@ -119,8 +122,31 @@ async def login(request: LoginRequest, req: Request, db: Session = Depends(get_d
         "role": user.role,
         "exp": datetime.utcnow() + timedelta(hours=1),
     }
-    
     access_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+    token_hash = hashlib.sha256(access_token.encode()).hexdigest()
+    
+    session = SessionModel(
+        user_id=user.id,
+        token_hash=token_hash,
+        ip_address=ip,
+        user_agent=user_agent,
+        device_info=user_agent.split('/')[0] if '/' in user_agent else 'Unknown',
+        expires_at=datetime.utcnow() + timedelta(hours=1)
+    )
+    db.add(session)
+    
+    # Log activity
+    activity = UserActivity(
+        user_id=user.id,
+        action="login",
+        resource_type="session",
+        resource_id=str(session.id) if session.id else None,
+        details=f"User logged in from {ip}",
+        ip_address=ip,
+        user_agent=user_agent
+    )
+    db.add(activity)
+    db.commit()
     
     refresh_token_data = {
         "sub": user.email,
@@ -454,6 +480,30 @@ async def logout(req: Request, db: Session = Depends(get_db)):
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             user_id = payload.get("user_id")
             tenant_id = payload.get("tenant_id")
+            
+            # Delete session
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            session = db.query(SessionModel).filter(
+                SessionModel.user_id == int(user_id),
+                SessionModel.token_hash == token_hash
+            ).first()
+            
+            if session:
+                db.delete(session)
+            
+            # Log activity
+            activity = UserActivity(
+                user_id=int(user_id) if user_id else None,
+                action="logout",
+                resource_type="session",
+                resource_id=str(session.id) if session else None,
+                details=f"User logged out from {ip}",
+                ip_address=ip,
+                user_agent=req.headers.get("user-agent", "unknown")
+            )
+            db.add(activity)
+            db.commit()
+            
             log_security_event(db, "logout", int(user_id) if user_id else None, tenant_id, ip)
         except:
             pass

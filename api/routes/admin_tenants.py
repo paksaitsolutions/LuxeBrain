@@ -67,9 +67,9 @@ async def get_all_tenants(
     db: Session = Depends(get_db)
 ):
     """Get all tenants with search and filters"""
-    from datetime import datetime
+    from datetime import datetime, timedelta
     from sqlalchemy import or_, func
-    from api.models.database_models import RevenueRecord
+    from api.models.database_models import RevenueRecord, ApiLog, SupportTicket
     
     query = db.query(Tenant)
     
@@ -100,13 +100,77 @@ async def get_all_tenants(
     
     tenants = query.all()
     
-    # Add revenue for each tenant
+    # Calculate health score for each tenant
     result = []
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    
     for t in tenants:
+        # Revenue
         revenue = db.query(func.sum(RevenueRecord.amount)).filter(
             RevenueRecord.tenant_id == t.tenant_id,
             RevenueRecord.status == "paid"
         ).scalar() or 0
+        
+        # API usage (last 30 days)
+        api_calls = db.query(func.count(ApiLog.id)).filter(
+            ApiLog.tenant_id == t.tenant_id,
+            ApiLog.created_at >= thirty_days_ago
+        ).scalar() or 0
+        
+        # Support tickets
+        open_tickets = db.query(func.count(SupportTicket.id)).filter(
+            SupportTicket.tenant_id == t.tenant_id,
+            SupportTicket.status.in_(["open", "in_progress"])
+        ).scalar() or 0
+        
+        # Payment history (last payment)
+        last_payment = db.query(RevenueRecord).filter(
+            RevenueRecord.tenant_id == t.tenant_id,
+            RevenueRecord.status == "paid"
+        ).order_by(RevenueRecord.created_at.desc()).first()
+        
+        days_since_payment = (datetime.utcnow() - last_payment.created_at).days if last_payment else 999
+        
+        # Calculate health score (0-100)
+        health_score = 100
+        
+        # Usage factor (0-40 points)
+        if api_calls == 0:
+            health_score -= 40
+        elif api_calls < 100:
+            health_score -= 20
+        elif api_calls < 500:
+            health_score -= 10
+        
+        # Payment factor (0-30 points)
+        if days_since_payment > 60:
+            health_score -= 30
+        elif days_since_payment > 30:
+            health_score -= 15
+        
+        # Support tickets factor (0-30 points)
+        if open_tickets > 5:
+            health_score -= 30
+        elif open_tickets > 2:
+            health_score -= 15
+        elif open_tickets > 0:
+            health_score -= 5
+        
+        # Status factor
+        if t.status == "suspended":
+            health_score = 0
+        elif t.status == "pending":
+            health_score = 50
+        
+        # Determine risk level
+        if health_score >= 80:
+            risk_level = "healthy"
+        elif health_score >= 60:
+            risk_level = "moderate"
+        elif health_score >= 40:
+            risk_level = "at_risk"
+        else:
+            risk_level = "critical"
         
         result.append({
             "tenant_id": t.tenant_id,
@@ -117,7 +181,14 @@ async def get_all_tenants(
             "created_at": t.created_at.isoformat(),
             "company_name": t.company_name,
             "industry": t.industry,
-            "revenue": float(revenue)
+            "revenue": float(revenue),
+            "health_score": health_score,
+            "risk_level": risk_level,
+            "metrics": {
+                "api_calls_30d": api_calls,
+                "open_tickets": open_tickets,
+                "days_since_payment": days_since_payment
+            }
         })
     
     return {"tenants": result, "total": len(result)}
@@ -597,3 +668,204 @@ async def delete_tenant(tenant_id: str, admin=Depends(verify_admin), db: Session
     TenantResolver.invalidate_cache(tenant_id)
     
     return {"message": "Tenant deleted successfully"}
+
+
+@router.post("/{tenant_id}/export-data")
+async def export_tenant_data(
+    tenant_id: str,
+    admin=Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """Export all tenant data for GDPR compliance"""
+    from api.models.database_models import RevenueRecord, ApiLog, UserActivity, SupportTicket
+    from fastapi.responses import StreamingResponse
+    import json
+    import io
+    
+    tenant = db.query(Tenant).filter(Tenant.tenant_id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    
+    # Collect all tenant data
+    export_data = {
+        "tenant": {
+            "tenant_id": tenant.tenant_id,
+            "name": tenant.name,
+            "email": tenant.email,
+            "plan": tenant.plan,
+            "status": tenant.status,
+            "company_name": tenant.company_name,
+            "company_website": tenant.company_website,
+            "company_phone": tenant.company_phone,
+            "industry": tenant.industry,
+            "address": tenant.address,
+            "poc": tenant.poc,
+            "tax_info": tenant.tax_info,
+            "created_at": tenant.created_at.isoformat(),
+            "updated_at": tenant.updated_at.isoformat()
+        },
+        "users": [],
+        "billing_history": [],
+        "api_logs": [],
+        "activities": [],
+        "support_tickets": []
+    }
+    
+    # Users
+    users = db.query(User).filter(User.tenant_id == tenant_id).all()
+    for user in users:
+        export_data["users"].append({
+            "email": user.email,
+            "role": user.role,
+            "created_at": user.created_at.isoformat(),
+            "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None
+        })
+    
+    # Billing history
+    billing = db.query(RevenueRecord).filter(RevenueRecord.tenant_id == tenant_id).all()
+    for record in billing:
+        export_data["billing_history"].append({
+            "amount": record.amount,
+            "plan": record.plan,
+            "status": record.status,
+            "created_at": record.created_at.isoformat()
+        })
+    
+    # API logs (last 1000)
+    api_logs = db.query(ApiLog).filter(ApiLog.tenant_id == tenant_id).limit(1000).all()
+    for log in api_logs:
+        export_data["api_logs"].append({
+            "endpoint": log.endpoint,
+            "method": log.method,
+            "status_code": log.status_code,
+            "created_at": log.created_at.isoformat()
+        })
+    
+    # Activities (last 1000)
+    user_ids = [u.id for u in users]
+    if user_ids:
+        activities = db.query(UserActivity).filter(UserActivity.user_id.in_(user_ids)).limit(1000).all()
+        for activity in activities:
+            export_data["activities"].append({
+                "action": activity.action,
+                "resource_type": activity.resource_type,
+                "details": activity.details,
+                "created_at": activity.created_at.isoformat()
+            })
+    
+    # Support tickets
+    tickets = db.query(SupportTicket).filter(SupportTicket.tenant_id == tenant_id).all()
+    for ticket in tickets:
+        export_data["support_tickets"].append({
+            "ticket_number": ticket.ticket_number,
+            "subject": ticket.subject,
+            "status": ticket.status,
+            "priority": ticket.priority,
+            "created_at": ticket.created_at.isoformat()
+        })
+    
+    # Convert to JSON
+    json_data = json.dumps(export_data, indent=2)
+    
+    # Return as downloadable file
+    return StreamingResponse(
+        iter([json_data]),
+        media_type="application/json",
+        headers={"Content-Disposition": f"attachment; filename=tenant_{tenant_id}_data_export.json"}
+    )
+
+
+@router.delete("/{tenant_id}/data")
+async def delete_tenant_data(
+    tenant_id: str,
+    delete_type: str,
+    admin=Depends(verify_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete or anonymize tenant data for GDPR compliance"""
+    from api.models.database_models import RevenueRecord, ApiLog, UserActivity, SupportTicket
+    from datetime import datetime
+    
+    tenant = db.query(Tenant).filter(Tenant.tenant_id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    
+    if delete_type == "anonymize":
+        # Anonymize tenant data
+        tenant.name = f"Deleted User {tenant.id}"
+        tenant.email = f"deleted_{tenant.id}@anonymized.local"
+        tenant.company_name = "[DELETED]"
+        tenant.company_website = None
+        tenant.company_phone = None
+        tenant.address = {}
+        tenant.poc = {}
+        tenant.tax_info = {}
+        tenant.woocommerce = {}
+        tenant.status = "deleted"
+        
+        # Anonymize users
+        users = db.query(User).filter(User.tenant_id == tenant_id).all()
+        for user in users:
+            user.email = f"deleted_{user.id}@anonymized.local"
+            user.password_hash = "DELETED"
+        
+        # Keep billing/activity records but mark as anonymized
+        db.commit()
+        
+        # Log deletion
+        activity = UserActivity(
+            user_id=admin.get('user_id'),
+            action="tenant_data_anonymized",
+            resource_type="tenant",
+            resource_id=tenant_id,
+            details=f"Anonymized tenant {tenant_id}",
+            ip_address="admin",
+            user_agent="admin_portal"
+        )
+        db.add(activity)
+        db.commit()
+        
+        return {"message": "Tenant data anonymized successfully", "type": "anonymize"}
+    
+    elif delete_type == "hard_delete":
+        # Hard delete all tenant data
+        
+        # Delete users
+        db.query(User).filter(User.tenant_id == tenant_id).delete()
+        
+        # Delete billing records
+        db.query(RevenueRecord).filter(RevenueRecord.tenant_id == tenant_id).delete()
+        
+        # Delete API logs
+        db.query(ApiLog).filter(ApiLog.tenant_id == tenant_id).delete()
+        
+        # Delete support tickets
+        db.query(SupportTicket).filter(SupportTicket.tenant_id == tenant_id).delete()
+        
+        # Delete activities (get user IDs first)
+        user_ids = [u.id for u in db.query(User).filter(User.tenant_id == tenant_id).all()]
+        if user_ids:
+            db.query(UserActivity).filter(UserActivity.user_id.in_(user_ids)).delete()
+        
+        # Delete tenant
+        db.delete(tenant)
+        
+        # Log deletion before committing
+        activity = UserActivity(
+            user_id=admin.get('user_id'),
+            action="tenant_data_deleted",
+            resource_type="tenant",
+            resource_id=tenant_id,
+            details=f"Hard deleted tenant {tenant_id}",
+            ip_address="admin",
+            user_agent="admin_portal"
+        )
+        db.add(activity)
+        
+        db.commit()
+        TenantResolver.invalidate_cache(tenant_id)
+        
+        return {"message": "Tenant data permanently deleted", "type": "hard_delete"}
+    
+    else:
+        raise HTTPException(status_code=400, detail="Invalid delete_type. Use 'anonymize' or 'hard_delete'")

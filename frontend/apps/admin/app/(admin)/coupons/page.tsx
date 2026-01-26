@@ -8,7 +8,18 @@ export default function CouponsPage() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newCoupon, setNewCoupon] = useState({ code: '', discount: 0, type: 'percent', limit: '', expires: '' });
+  const [newCoupon, setNewCoupon] = useState({ 
+    code: '', 
+    discount: 0, 
+    type: 'percent', 
+    limit: '', 
+    expires: '',
+    first_time_only: false,
+    plan_specific: [] as string[],
+    min_amount: '',
+    is_stackable: false,
+    auto_apply: false
+  });
 
   useEffect(() => {
     loadCoupons();
@@ -49,11 +60,29 @@ export default function CouponsPage() {
           discount: Number(newCoupon.discount),
           type: newCoupon.type,
           limit: newCoupon.limit ? Number(newCoupon.limit) : null,
-          expires: newCoupon.expires || null
+          expires: newCoupon.expires || null,
+          restrictions: {
+            first_time_only: newCoupon.first_time_only,
+            plan_specific: newCoupon.plan_specific,
+            min_amount: newCoupon.min_amount ? Number(newCoupon.min_amount) : null
+          },
+          is_stackable: newCoupon.is_stackable,
+          auto_apply: newCoupon.auto_apply
         })
       });
       setShowCreateModal(false);
-      setNewCoupon({ code: '', discount: 0, type: 'percent', limit: '', expires: '' });
+      setNewCoupon({ 
+        code: '', 
+        discount: 0, 
+        type: 'percent', 
+        limit: '', 
+        expires: '',
+        first_time_only: false,
+        plan_specific: [],
+        min_amount: '',
+        is_stackable: false,
+        auto_apply: false
+      });
       loadCoupons();
       toast.success('Coupon created successfully!');
     } catch (error) {
@@ -143,7 +172,7 @@ export default function CouponsPage() {
       {/* Create Coupon Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
+          <div className="bg-white rounded-lg p-6 w-[500px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Create New Coupon</h2>
             <div className="space-y-4">
               <div>
@@ -196,6 +225,75 @@ export default function CouponsPage() {
                   className="w-full px-3 py-2 border rounded"
                 />
               </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-medium mb-3">Restrictions</h3>
+                
+                <div className="space-y-3">
+                  <label className="flex items-center">
+                    <input 
+                      type="checkbox"
+                      checked={newCoupon.first_time_only}
+                      onChange={(e) => setNewCoupon({...newCoupon, first_time_only: e.target.checked})}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">First-time customers only</span>
+                  </label>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Plan-specific (optional)</label>
+                    <select 
+                      multiple
+                      value={newCoupon.plan_specific}
+                      onChange={(e) => setNewCoupon({...newCoupon, plan_specific: Array.from(e.target.selectedOptions, o => o.value)})}
+                      className="w-full px-3 py-2 border rounded"
+                      size={3}
+                    >
+                      <option value="starter">Starter</option>
+                      <option value="growth">Growth</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Minimum amount ($)</label>
+                    <input 
+                      type="number"
+                      value={newCoupon.min_amount}
+                      onChange={(e) => setNewCoupon({...newCoupon, min_amount: e.target.value})}
+                      className="w-full px-3 py-2 border rounded"
+                      placeholder="50"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-medium mb-3">Options</h3>
+                
+                <div className="space-y-3">
+                  <label className="flex items-center">
+                    <input 
+                      type="checkbox"
+                      checked={newCoupon.is_stackable}
+                      onChange={(e) => setNewCoupon({...newCoupon, is_stackable: e.target.checked})}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Stackable with other coupons</span>
+                  </label>
+
+                  <label className="flex items-center">
+                    <input 
+                      type="checkbox"
+                      checked={newCoupon.auto_apply}
+                      onChange={(e) => setNewCoupon({...newCoupon, auto_apply: e.target.checked})}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Auto-apply at checkout</span>
+                  </label>
+                </div>
+              </div>
             </div>
             <div className="flex gap-3 mt-6">
               <button 
@@ -207,7 +305,18 @@ export default function CouponsPage() {
               <button 
                 onClick={() => {
                   setShowCreateModal(false);
-                  setNewCoupon({ code: '', discount: 0, type: 'percent', limit: '', expires: '' });
+                  setNewCoupon({ 
+                    code: '', 
+                    discount: 0, 
+                    type: 'percent', 
+                    limit: '', 
+                    expires: '',
+                    first_time_only: false,
+                    plan_specific: [],
+                    min_amount: '',
+                    is_stackable: false,
+                    auto_apply: false
+                  });
                 }}
                 className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
               >

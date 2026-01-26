@@ -420,6 +420,7 @@ export default function TenantsPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tenant</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Health</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
@@ -446,6 +447,34 @@ export default function TenantsPage() {
                   <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                     {tenant.plan || 'starter'}
                   </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${
+                            tenant.risk_level === 'healthy' ? 'bg-green-500' :
+                            tenant.risk_level === 'moderate' ? 'bg-yellow-500' :
+                            tenant.risk_level === 'at_risk' ? 'bg-orange-500' :
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${tenant.health_score || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      tenant.risk_level === 'healthy' ? 'text-green-600' :
+                      tenant.risk_level === 'moderate' ? 'text-yellow-600' :
+                      tenant.risk_level === 'at_risk' ? 'text-orange-600' :
+                      'text-red-600'
+                    }`}>
+                      {tenant.health_score || 0}
+                    </span>
+                  </div>
+                  {tenant.risk_level === 'critical' && (
+                    <div className="text-xs text-red-600 mt-1">⚠️ At Risk</div>
+                  )}
                 </td>
                 <td className="px-6 py-4 font-medium">
                   ${(tenant.revenue || 0).toFixed(2)}

@@ -27,6 +27,8 @@ interface Alert {
 function AnomaliesContent() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedAnomaly, setSelectedAnomaly] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     loadAlerts();
@@ -48,17 +50,57 @@ function AnomaliesContent() {
     setLoading(false);
   };
 
-  const resolveAnomaly = async (anomalyId: string, status: string) => {
+  const viewDetails = async (anomalyId: string) => {
     try {
-      await fetch("http://localhost:8000/api/admin/anomalies/resolve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ anomaly_id: anomalyId, status }),
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/anomalies/${anomalyId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
+      const data = await res.json();
+      setSelectedAnomaly(data);
+      setShowDetailModal(true);
+    } catch (error) {
+      console.error('Failed to load details:', error);
+    }
+  };
+
+  const markFalsePositive = async (anomalyId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/anomalies/${anomalyId}/mark-false-positive`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setShowDetailModal(false);
       loadAlerts();
     } catch (error) {
-      console.error("Failed to resolve:", error);
+      console.error('Failed to mark false positive:', error);
+    }
+  };
+
+  const createTicket = async (anomalyId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/anomalies/${anomalyId}/create-ticket`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      alert('Ticket created successfully');
+    } catch (error) {
+      console.error('Failed to create ticket:', error);
+    }
+  };
+
+  const notifyTenant = async (anomalyId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/anomalies/${anomalyId}/notify-tenant`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      alert('Tenant notified successfully');
+    } catch (error) {
+      console.error('Failed to notify tenant:', error);
     }
   };
 
@@ -162,22 +204,109 @@ function AnomaliesContent() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => resolveAnomaly(alert.data.id || `${alert.data.tenant_id}-${idx}`, "resolved")}
-                      className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                      onClick={() => viewDetails(alert.data.id || `${alert.data.tenant_id}-${idx}`)}
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
-                      Resolve
-                    </button>
-                    <button
-                      onClick={() => resolveAnomaly(alert.data.id || `${alert.data.tenant_id}-${idx}`, "ignored")}
-                      className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
-                    >
-                      Ignore
+                      View Details
                     </button>
                   </div>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {showDetailModal && selectedAnomaly && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[800px] max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Anomaly Details</h2>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Metric</p>
+                  <p className="font-medium">{selectedAnomaly.anomaly.metric_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Severity</p>
+                  <span className={`px-3 py-1 rounded-full text-sm ${getSeverityColor(selectedAnomaly.anomaly.severity)}`}>
+                    {selectedAnomaly.anomaly.severity}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Actual Value</p>
+                  <p className="font-medium">{selectedAnomaly.anomaly.metric_value}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Expected Value</p>
+                  <p className="font-medium">{selectedAnomaly.anomaly.expected_value || 'N/A'}</p>
+                </div>
+              </div>
+
+              {selectedAnomaly.tenant && (
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-2">Affected Tenant</h3>
+                  <p><span className="text-gray-600">Name:</span> {selectedAnomaly.tenant.name}</p>
+                  <p><span className="text-gray-600">Email:</span> {selectedAnomaly.tenant.email}</p>
+                </div>
+              )}
+
+              {selectedAnomaly.related_anomalies?.length > 0 && (
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-2">Related Anomalies</h3>
+                  <div className="space-y-2">
+                    {selectedAnomaly.related_anomalies.map((r: any) => (
+                      <div key={r.anomaly_id} className="text-sm p-2 bg-gray-50 rounded">
+                        <span className="font-medium">{r.metric_name}</span> - {r.severity}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedAnomaly.timeline?.length > 0 && (
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-2">Timeline (Last 7 Days)</h3>
+                  <div className="space-y-1">
+                    {selectedAnomaly.timeline.slice(0, 5).map((t: any) => (
+                      <div key={t.anomaly_id} className="text-sm flex justify-between">
+                        <span>{new Date(t.detected_at).toLocaleString()}</span>
+                        <span>Value: {t.metric_value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => markFalsePositive(selectedAnomaly.anomaly.anomaly_id)}
+                className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+              >
+                Mark False Positive
+              </button>
+              <button
+                onClick={() => createTicket(selectedAnomaly.anomaly.anomaly_id)}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                Create Ticket
+              </button>
+              <button
+                onClick={() => notifyTenant(selectedAnomaly.anomaly.anomaly_id)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Notify Tenant
+              </button>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

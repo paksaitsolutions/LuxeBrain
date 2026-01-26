@@ -4,11 +4,15 @@ import { useEffect, useState } from 'react';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
+  const [invitations, setInvitations] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('admin');
   const [newUser, setNewUser] = useState({ 
     email: '', password: '', full_name: '', role: 'support', 
     department: '', phone: '', permissions: [], avatar_url: '' 
@@ -18,6 +22,7 @@ export default function AdminUsersPage() {
   useEffect(() => {
     loadUsers();
     loadRoles();
+    loadInvitations();
   }, [filter]);
 
   const loadUsers = async () => {
@@ -47,6 +52,47 @@ export default function AdminUsersPage() {
       setRoles(data.roles || []);
     } catch (error) {
       console.error('Failed to load roles:', error);
+    }
+  };
+
+  const loadInvitations = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/invitations`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setInvitations(data.invitations || []);
+    } catch (error) {
+      console.error('Failed to load invitations:', error);
+    }
+  };
+
+  const sendInvite = async () => {
+    if (!inviteEmail) {
+      alert('Please enter an email');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/invite`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole })
+      });
+      
+      alert('Invitation sent successfully!');
+      setShowInviteModal(false);
+      setInviteEmail('');
+      setInviteRole('admin');
+      loadInvitations();
+    } catch (error: any) {
+      console.error('Failed to send invite:', error);
+      alert(error.message || 'Failed to send invitation');
     }
   };
 
@@ -143,12 +189,20 @@ export default function AdminUsersPage() {
           <h1 className="text-3xl font-bold">User Management</h1>
           <p className="text-gray-600 mt-1">Manage team members and their access</p>
         </div>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          + New User
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setShowInviteModal(true)}
+            className="px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-50"
+          >
+            Invite User
+          </button>
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            + New User
+          </button>
+        </div>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow flex gap-4">
@@ -171,6 +225,26 @@ export default function AdminUsersPage() {
           <option value="sales">Sales</option>
         </select>
       </div>
+
+      {/* Pending Invitations */}
+      {invitations.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h3 className="font-semibold mb-3">Pending Invitations ({invitations.length})</h3>
+          <div className="space-y-2">
+            {invitations.map((inv) => (
+              <div key={inv.id} className="flex justify-between items-center bg-white p-3 rounded">
+                <div>
+                  <div className="font-medium">{inv.email}</div>
+                  <div className="text-sm text-gray-600">
+                    Role: {inv.role} • Expires: {new Date(inv.expires_at).toLocaleDateString()}
+                  </div>
+                </div>
+                <span className="text-xs text-yellow-600">Pending</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full">
@@ -222,6 +296,66 @@ export default function AdminUsersPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Invite User Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[500px]">
+            <h2 className="text-xl font-bold mb-4">Invite Admin User</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Email Address</label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="w-full px-3 py-2 border rounded"
+                  placeholder="user@example.com"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Role</label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  className="w-full px-3 py-2 border rounded"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="text-sm text-blue-800">
+                  An invitation email will be sent with a link that expires in 48 hours.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={sendInvite}
+                disabled={!inviteEmail}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                Send Invitation
+              </button>
+              <button
+                onClick={() => {
+                  setShowInviteModal(false);
+                  setInviteEmail('');
+                  setInviteRole('admin');
+                }}
+                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create User Modal */}
       {showCreateModal && (

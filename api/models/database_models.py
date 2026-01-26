@@ -402,6 +402,7 @@ class ApiKey(Base):
     name = Column(String)
     tenant_id = Column(String, index=True)
     scopes = Column(JSON)  # ["read", "write", "admin"]
+    permissions = Column(JSON, nullable=True)  # ["products:read", "orders:write", etc.]
     expires_at = Column(DateTime, nullable=True)
     last_used_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -545,6 +546,9 @@ class Coupon(Base):
     limit = Column(Integer, nullable=True)
     expires = Column(String, nullable=True)
     active = Column(Boolean, default=True)
+    restrictions = Column(JSON, nullable=True)  # {first_time_only, plan_specific, min_amount}
+    is_stackable = Column(Boolean, default=False)
+    auto_apply = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -567,5 +571,117 @@ class EmailTemplate(Base):
     subject = Column(String)
     body = Column(Text)
     active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Session(Base):
+    __tablename__ = "sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    token_hash = Column(String, index=True)
+    ip_address = Column(String)
+    user_agent = Column(Text)
+    device_info = Column(String)
+    location = Column(String, nullable=True)
+    last_activity = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AdminInvitation(Base):
+    __tablename__ = "admin_invitations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, index=True)
+    role = Column(String)
+    token = Column(String, unique=True, index=True)
+    invited_by = Column(Integer, ForeignKey("users.id"))
+    expires_at = Column(DateTime)
+    accepted = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, index=True)
+    value = Column(Text)
+    category = Column(String, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = Column(Integer, ForeignKey("users.id"))
+
+
+class DashboardWidget(Base):
+    __tablename__ = "dashboard_widgets"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    widget_type = Column(String)
+    position = Column(Integer)
+    size = Column(String, default='medium')
+    refresh_interval = Column(Integer, default=300)
+    config = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class CouponUsage(Base):
+    __tablename__ = "coupon_usage"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    coupon_id = Column(Integer, ForeignKey("coupons.id"), index=True)
+    tenant_id = Column(String, index=True)
+    discount_amount = Column(Float)
+    used_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BatchJob(Base):
+    __tablename__ = "batch_jobs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(String, unique=True, index=True)
+    job_type = Column(String)  # inference, training, data_sync
+    status = Column(String, default="pending")  # pending, running, completed, failed, cancelled
+    progress = Column(Integer, default=0)
+    total = Column(Integer, default=0)
+    tenant_id = Column(String, nullable=True, index=True)
+    created_by = Column(Integer, nullable=True)
+    error_message = Column(Text, nullable=True)
+    logs = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+
+class Anomaly(Base):
+    __tablename__ = "anomalies"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    anomaly_id = Column(String, unique=True, index=True)
+    tenant_id = Column(String, nullable=True, index=True)
+    metric_name = Column(String)
+    metric_value = Column(Float)
+    expected_value = Column(Float, nullable=True)
+    severity = Column(String, default="medium")  # low, medium, high, critical
+    status = Column(String, default="open")  # open, resolved, ignored
+    is_false_positive = Column(Boolean, default=False)
+    related_anomalies = Column(Text, nullable=True)
+    detected_at = Column(DateTime, default=datetime.utcnow, index=True)
+    resolved_at = Column(DateTime, nullable=True)
+
+
+class AlertRule(Base):
+    __tablename__ = "alert_rules"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    rule_name = Column(String)
+    metric_name = Column(String, index=True)
+    threshold_value = Column(Float)
+    condition = Column(String)  # greater_than, less_than, equals
+    severity = Column(String, default="medium")
+    channels = Column(JSON)  # ["email", "slack", "webhook"]
+    is_active = Column(Boolean, default=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

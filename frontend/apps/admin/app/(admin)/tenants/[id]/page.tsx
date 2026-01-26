@@ -150,13 +150,27 @@ export default function TenantDetailPage() {
 
   const deleteTenant = async () => {
     if (!confirm('Are you sure you want to DELETE this tenant? This action cannot be undone!')) return;
+    
+    const deleteType = prompt('Enter deletion type:\n- "anonymize" to anonymize data (GDPR compliant)\n- "hard_delete" to permanently delete all data\n\nType:');
+    
+    if (!deleteType || !['anonymize', 'hard_delete'].includes(deleteType)) {
+      alert('Invalid deletion type. Please enter "anonymize" or "hard_delete"');
+      return;
+    }
+    
+    const confirmText = deleteType === 'hard_delete' 
+      ? 'PERMANENTLY DELETE all data? This CANNOT be undone!'
+      : 'ANONYMIZE all personal data? This will keep records but remove identifiable information.';
+    
+    if (!confirm(confirmText)) return;
+    
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/tenants/${tenantId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/tenants/${tenantId}/data?delete_type=${deleteType}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      alert('Tenant deleted');
+      alert(deleteType === 'anonymize' ? 'Tenant data anonymized' : 'Tenant data permanently deleted');
       router.push('/tenants');
     } catch (error) {
       console.error('Failed to delete tenant:', error);
@@ -210,6 +224,34 @@ export default function TenantDetailPage() {
         </div>
         <div className="flex gap-2">
           <button 
+            onClick={async () => {
+              if (!confirm('Export all tenant data? This will download a JSON file with all tenant information.')) return;
+              try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/tenants/${tenantId}/export-data`, {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `tenant_${tenantId}_data_export.json`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                alert('Data exported successfully!');
+              } catch (error) {
+                console.error('Failed to export data:', error);
+                alert('Failed to export data');
+              }
+            }}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Export Data
+          </button>
+          <button 
             onClick={impersonateTenant}
             className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
           >
@@ -230,8 +272,9 @@ export default function TenantDetailPage() {
           <button 
             onClick={deleteTenant}
             className="px-4 py-2 border border-red-600 text-red-600 rounded hover:bg-red-50"
+            title="Delete or anonymize tenant data (GDPR)"
           >
-            Delete
+            Delete Data
           </button>
         </div>
       </div>
